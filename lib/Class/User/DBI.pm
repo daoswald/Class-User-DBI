@@ -5,6 +5,11 @@ use 5.008;
 
 use strict;
 use warnings;
+
+use Socket qw( inet_ntoa inet_aton );
+
+use List::MoreUtils qw( any );
+
 use Authen::Passphrase::SaltedSHA512;
 
 use Class::User::DBI::DB qw( %QUERY );
@@ -104,7 +109,9 @@ sub fetch_valid_ips {
         $self->userid );
     my $rv = [];
     while ( defined( my $row = $sth->fetchrow_arrayref ) ) {
-        push @{$rv}, $row->[0] if $row->[0];
+        if ( defined $row->[0] ) {
+            push @{$rv}, inet_ntoa( pack 'N', $row->[0] );
+        }
     }
     return $rv;
 }
@@ -140,16 +147,17 @@ sub validate_user {
     );
 
     # Return undef if password doesn't authenticate for the user.
-    return unless $auth->match($password);
+    return unless $auth->match($password);    ## no critic (postfix)
 
     # Return undef if an IP is required, and IP param is not in whitelist.
     if ( $credentials->{ip_required} ) {
-        return unless defined $ip;    # Reject if no IP param.
-        return unless grep { $ip eq $_ } @{ $credentials->{valid_ips} };
+        ## no critic (postfix)
+        return unless defined $ip;            # Reject if no IP param.
+        return unless any { $ip eq $_ } @{ $credentials->{valid_ips} };
     }
 
     # We passed! Authenticate.
-    $self->{validated} = 1;           # Set in object that we're authenticated.
+    $self->{validated} = 1;    # Set in object that we're authenticated.
     return $self->userid;
 }
 
@@ -158,10 +166,10 @@ sub validate_user {
 sub exists_user {
     my $self = shift;
     return $self->{exists_user}
-      if $self->{exists_user};        # Only query if we have to.
+      if $self->{exists_user};    # Only query if we have to.
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_exists_user},
         $self->userid );
-    return $sth->fetchrow_array;      # Will be undef if user doesn't exist.
+    return $sth->fetchrow_array;    # Will be undef if user doesn't exist.
 }
 
 # May be useful later on if we add user information.
@@ -185,7 +193,9 @@ sub add_ips {
     return 0 if !@ips_to_insert;
 
     # Prepare the userid,ip bundles for our insert query.
-    my @execution_param_bundles = map { [ $self->userid, $_ ] } @ips_to_insert;
+    ## no critic (builtin)
+    my @execution_param_bundles =
+      map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_to_insert;
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_add_ips},
         @execution_param_bundles );
 
@@ -199,9 +209,9 @@ sub delete_ips {
     my %found;
     @found{ @{$ips_in_db} } = ();
     my @ips_for_deletion = grep { exists $found{$_} } @{$ips_aref};
+    ## no critic (Builtin)
     my @execution_param_bundles =
-      map { [ $self->userid, $_ ] } @ips_for_deletion;
-
+      map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_for_deletion;
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_ips},
         @execution_param_bundles );
     return scalar @ips_for_deletion;    # Return a count of IP's deleted.
@@ -255,7 +265,7 @@ sub update_password {
     );
 
     # Return undef if password doesn't authenticate for the user.
-    return unless $auth->match($oldpass);
+    return unless $auth->match($oldpass);    ## no critic (postfix)
 
     my $passgen =
       Authen::Passphrase::SaltedSHA512->new( passphrase => $newpass );
@@ -293,19 +303,6 @@ sub delete_user {
                             # also the current user.
     $self->{exists_user} = 0;    # Invalidate the exists_user cache.
     return 1;
-}
-
-# $self->_db_run_ex( 'SQL GOES HERE', @execute_params ); .... OR....
-# $self->_db_run_ex(
-#     'SQL GOES HERE',
-#     [ first param list ], [ second param list ], ...
-# );
-
-sub list_users {
-    my ( $class, $conn ) = @_;
-    my $self = $class->new( $conn, 'dummy_class_user' );
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_list_users} );
-    return $sth->fetchall_arrayref;
 }
 
 # my $cans_aref = $user->fetch_roles;
@@ -347,6 +344,32 @@ sub delete_role {
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_role},
         $self->userid, $role );
     return $self->userid;
+}
+
+# Class methods
+
+sub list_users {
+    my ( $class, $conn ) = @_;
+    my $self = $class->new( $conn, 'dummy_class_user' );
+    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_list_users} );
+    return $sth->fetchall_arrayref;
+}
+
+sub configure_db {
+    my ( $class, $conn ) = @_;
+    my @SQL_keys = qw(
+      SQL_configure_db_users
+      SQL_configure_db_user_ips
+      SQL_configure_db_user_roles
+    );
+    foreach my $sql_key (@SQL_keys) {
+        $conn->run(
+            fixup => sub {
+                $_->do( $Class::User::DBI::DB::QUERY{$sql_key} );
+            }
+        );
+    }
+    return 1;
 }
 
 1;
@@ -429,14 +452,31 @@ userid.  Validate, load user info, load roles, test roles... read on.
 
 =head1 EXPORT
 
-Nothing is exported.  There are two class methods: The constructor, C<new()>,
-and C<list_users()>.
+Nothing is exported.  There are three class methods:
 
+=over 4
+
+=item * C<new()>
+
+The constructor.
+
+=item * C<list_users()>
+
+Obtain a list of all users in the database.
+
+=item * C<configure_db>
+
+Build the tables for a minimal installation... C<IF NOT EXISTS>.
+
+=back
 
 =head1 SUBROUTINES/METHODS
 
 
 =head2 	list_users
+
+
+=head2  configure_db
 
 
 =head2 	new

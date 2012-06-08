@@ -4,10 +4,10 @@ use strict;
 use warnings;
 use Test::More;
 use Class::User::DBI;
-use Data::Dumper;
+
+# use Data::Dumper;
 
 use DBIx::Connector;
-
 
 # WARNING:  Tables will be dropped before and after running these tests.
 #           Only run the tests against a test database containing no data
@@ -15,11 +15,10 @@ use DBIx::Connector;
 #           Tables 'users', 'user_ips', and 'user_roles' WILL be dropped.
 # YOU HAVE BEEN WARNED.
 
-
 # SQLite database settings.
-my $dsn      = 'dbi:SQLite:dbname=:memory:';
-my $db_user  = '';
-my $db_pass  = '';
+my $dsn     = 'dbi:SQLite:dbname=:memory:';
+my $db_user = q{};
+my $db_pass = q{};
 
 # mysql database settings.
 # my $database = 'cudbi_test';
@@ -35,104 +34,62 @@ my $conn = DBIx::Connector->new(
     }
 );
 
-
-
 my $appuser        = 'testuser';
 my $appuser_ip_req = 'testuser_ip_req';
 my $test_ip        = '192.168.0.198';
 my $test_ip2       = '192.168.0.199';
 my $appuser_pass   = 'Morerugs';
 
-
-
 subtest 'Class::User::DBI use and can tests.' => sub {
     my $user = use_ok( 'Class::User::DBI', [ $conn, $appuser ] );
     can_ok(
         'Class::User::DBI', qw(
-            new             add_user        userid          validated
-            validate_user   load_user       fetch_valid_ips exists_user
-            delete_user     delete_ips      add_ips         update_email
-            update_username update_password list_users      fetch_roles
-            add_role        delete_role     can_role
-        )
+          new             add_user        userid          validated
+          validate_user   load_user       fetch_valid_ips exists_user
+          delete_user     delete_ips      add_ips         update_email
+          update_username update_password list_users      fetch_roles
+          add_role        delete_role     can_role
+          )
     );
     done_testing();
 };
 
 # Prepare the database environment.
-
-diag( 'Dropping tables if they exist.' );
-$conn->run(
-    fixup => sub {
-        $_-> do( 'DROP TABLE IF EXISTS users' );
-    }
-);
+# Drop tables if they exist (in case we're testing against a non-memory
+# test database.
 
 $conn->run(
     fixup => sub {
-        $_-> do( 'DROP TABLE IF EXISTS user_ips' );
+        $_->do('DROP TABLE IF EXISTS users');
     }
 );
 
 $conn->run(
     fixup => sub {
-        $_-> do( 'DROP TABLE IF EXISTS user_roles' );
-    }
-);
-
-
-
-$conn->run(
-    fixup   => sub {
-        $_->do( << 'END_SQL' );
-    CREATE TABLE users (
-        userid      VARCHAR(24)           NOT NULL DEFAULT '',
-        salt        CHAR(128)             DEFAULT NULL,
-        password    CHAR(128)             DEFAULT NULL,
-        ip_required TINYINT(1)            NOT NULL DEFAULT '1',
-        username    VARCHAR(40)           DEFAULT NULL,
-        email       VARCHAR(320)          DEFAULT NULL,
-        PRIMARY KEY( userid )
-    )
-END_SQL
+        $_->do('DROP TABLE IF EXISTS user_ips');
     }
 );
 
 $conn->run(
-    fixup   => sub {
-        $_->do( << 'END_SQL' );
-    CREATE TABLE user_ips (
-        userid      VARCHAR(24)           NOT NULL DEFAULT '',
-        ip          INT(10)      UNSIGNED NOT NULL DEFAULT '0',
-        PRIMARY KEY ( userid, ip )
-    )
-END_SQL
+    fixup => sub {
+        $_->do('DROP TABLE IF EXISTS user_roles');
     }
 );
 
-$conn->run(
-    fixup   => sub {
-        $_->do( << 'END_SQL' );
-    CREATE TABLE user_roles (
-        userid      VARCHAR(24)           NOT NULL DEFAULT '',
-        role        VARCHAR(40)           NOT NULL DEFAULT '',
-        PRIMARY KEY ( userid, role )
-    )
-END_SQL
-    }
-);
-
+Class::User::DBI->configure_db($conn);
 
 subtest "Tests for $appuser" => sub {
 
     my $user = Class::User::DBI->new( $conn, $appuser );
-    if( ! $user->exists_user ) {
-        $user->add_user( {
-            userid => $appuser,
-            password => $appuser_pass,
-            email   => 'fake@address.com',
-            username    => 'Test User',
-        } );
+    if ( !$user->exists_user ) {
+        $user->add_user(
+            {
+                userid   => $appuser,
+                password => $appuser_pass,
+                email    => 'fake@address.com',
+                username => 'Test User',
+            }
+        );
     }
 
     isa_ok( $user, 'Class::User::DBI', 'new():         ' );
@@ -197,14 +154,16 @@ subtest "Tests for $appuser" => sub {
 
 subtest "Tests for $appuser_ip_req." => sub {
     my $user = Class::User::DBI->new( $conn, $appuser_ip_req );
-    if( ! $user->exists_user ) {
-        $user->add_user( {
-            username => 'Test User Requiring IP',
-            email   => 'fake@address.com',
-            ip_req  => 1,
-            ips     => [ '192.168.0.198' ],
-            password => $appuser_pass,
-        } );
+    if ( !$user->exists_user ) {
+        $user->add_user(
+            {
+                username => 'Test User Requiring IP',
+                email    => 'fake@address.com',
+                ip_req   => 1,
+                ips      => ['192.168.0.198'],
+                password => $appuser_pass,
+            }
+        );
     }
     isa_ok( $user, 'Class::User::DBI', 'new():         ' );
     is( grep( { $_ eq $test_ip } @{ $user->fetch_valid_ips } ),
@@ -339,36 +298,49 @@ subtest 'update_password() tests.' => sub {
 };
 
 subtest 'list_users() tests.' => sub {
-    my $user_aref = Class::User::DBI->list_users( $conn );
-    is( ref( $user_aref ), 'ARRAY', 'Class::User::DBI->list_users() returns an arrayref.' );
-    is( scalar( grep{ $_->[0] eq $appuser } @{$user_aref} ), 1, 'Found our test user.' );
+    my $user_aref = Class::User::DBI->list_users($conn);
+    is( ref($user_aref), 'ARRAY',
+        'Class::User::DBI->list_users() returns an arrayref.' );
+    is( scalar( grep { $_->[0] eq $appuser } @{$user_aref} ),
+        1, 'Found our test user.' );
     is( scalar @{$user_aref} > 1, 1, 'Found more than one user.' );
     done_testing();
 };
 
 subtest 'Roles tests.' => sub {
     my $user = Class::User::DBI->new( $conn, $appuser );
-    if( ! $user->can_role( 'tupitar' ) ) {
-        $user->add_role( 'tupitar' );
+    if ( !$user->can_role('tupitar') ) {
+        $user->add_role('tupitar');
     }
     my $roles_aref = $user->fetch_roles;
     is( ref $roles_aref, 'ARRAY', 'fetch_roles() returns an arrayref.' );
-    is( scalar( grep { $_ eq 'tupitar' } @{$roles_aref} ), 1, 'fetch_roles(): tupitar is a role.' );
-    ok( $user->can_role( 'tupitar' ), 'can_role(): Test user can tupitar.' );
-    ok( ! $user->can_role( 'frobcinate' ), 'can_role(): Test user can not frobcinate (yet).' );
-    is( $user->add_role( 'frobcinate' ), 'frobcinate', 'add_role(): Added frobcinate role.' );
-    ok( $user->can_role( 'frobcinate' ), 'can_role(): Test user can now frobcinate.' );
-    ok( $user->delete_role( 'frobcinate' ), 'delete_role(): Deleted frobcinate role.' );
-    ok( ! $user->can_role( 'frobcinate' ), 'can_role(): Test user can no longer frobcinate.' ); 
+    is( scalar( grep { $_ eq 'tupitar' } @{$roles_aref} ),
+        1, 'fetch_roles(): tupitar is a role.' );
+    ok( $user->can_role('tupitar'), 'can_role(): Test user can tupitar.' );
+    ok( !$user->can_role('frobcinate'),
+        'can_role(): Test user can not frobcinate (yet).' );
+    is( $user->add_role('frobcinate'),
+        'frobcinate', 'add_role(): Added frobcinate role.' );
+    ok( $user->can_role('frobcinate'),
+        'can_role(): Test user can now frobcinate.' );
+    ok(
+        $user->delete_role('frobcinate'),
+        'delete_role(): Deleted frobcinate role.'
+    );
+    ok( !$user->can_role('frobcinate'),
+        'can_role(): Test user can no longer frobcinate.' );
     my $user2 = Class::User::DBI->new( $conn, 'roles_user' );
-    $user2->add_user( {
-        password => 'something',
-        username => 'somebody',
-        email => 'this@that.com'
-    } );
-    $user2->add_role( 'frobcinate' );
+    $user2->add_user(
+        {
+            password => 'something',
+            username => 'somebody',
+            email    => 'this@that.com'
+        }
+    );
+    $user2->add_role('frobcinate');
     $user2->delete_user;
-    ok( ! $user2->can_role( 'frobcinate' ), 'delete_user: Deleted user can no longer frobcinate.' );
+    ok( !$user2->can_role('frobcinate'),
+        'delete_user: Deleted user can no longer frobcinate.' );
     done_testing();
 };
 

@@ -14,16 +14,14 @@ $VERSION = eval $VERSION;            ## no critic (eval)
 
 # SQL queries used throughout Class::User::DBI.
 our %QUERY = (
-    SQL_fetch_valid_ips =>
-      'SELECT INET_NTOA(ip) as ip FROM user_ips WHERE userid = ?',
+    SQL_fetch_valid_ips => 'SELECT ip FROM user_ips WHERE userid = ?',
     SQL_fetch_user =>
       'SELECT salt, password, ip_required FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
     SQL_load_user =>
       'SELECT userid, username, email FROM users WHERE userid = ?',
-    SQL_add_ips => 'INSERT INTO user_ips VALUES( ?, INET_ATON( ? ) )',
-    SQL_delete_ips =>
-      'DELETE FROM user_ips WHERE userid = ? AND ip = INET_ATON( ? )',
+    SQL_add_ips    => 'INSERT INTO user_ips ( userid, ip ) VALUES( ?, ? )',
+    SQL_delete_ips => 'DELETE FROM user_ips WHERE userid = ? AND ip = ?',
     SQL_add_user => 'INSERT INTO users ( userid, salt, password, ip_required, '
       . 'username, email ) VALUES( ?, ?, ?, ?, ?, ? )',
     SQL_delete_user_users => 'DELETE FROM users WHERE userid = ?',
@@ -38,6 +36,32 @@ our %QUERY = (
     SQL_can_role => 'SELECT role FROM user_roles WHERE userid = ? AND role = ?',
     SQL_add_role => 'INSERT INTO user_roles ( userid, role ) VALUES ( ?, ? )',
     SQL_delete_role => 'DELETE FROM user_roles WHERE userid = ? AND role = ?',
+    SQL_configure_db_users => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS users (
+        userid      VARCHAR(24)           NOT NULL DEFAULT '',
+        salt        CHAR(128)             DEFAULT NULL,
+        password    CHAR(128)             DEFAULT NULL,
+        ip_required TINYINT(1)            NOT NULL DEFAULT '1',
+        username    VARCHAR(40)           DEFAULT NULL,
+        email       VARCHAR(320)          DEFAULT NULL,
+        PRIMARY KEY( userid )
+    )
+END_SQL
+    SQL_configure_db_user_ips => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS user_ips (
+        userid      VARCHAR(24)           NOT NULL DEFAULT '',
+        ip          INT(10)               NOT NULL DEFAULT '0',
+        PRIMARY KEY ( userid, ip )
+    )
+END_SQL
+    SQL_configure_db_user_roles => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS user_roles (
+        userid      VARCHAR(24)           NOT NULL DEFAULT '',
+        role        VARCHAR(40)           NOT NULL DEFAULT '',
+        PRIMARY KEY ( userid, role )
+    )
+END_SQL
+
 );
 
 1;
