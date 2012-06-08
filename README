@@ -1,0 +1,107 @@
+Class-User-DBI
+
+A User class: Login credentials and roles.
+
+Through a DBIx::Connector object, this module models a "User" class, with
+login credentials, and access roles.  Login credentials include a passphrase,
+and optionally per user IP whitelisting.
+
+The module is designed to simplify user logins, and basic administrative user
+maintenance.  Passphrases are salted with a 512 bit random salt (unique per
+user) using a cryptographically strong random number generator, and converted
+to a SHA2-512 digest before being stored in the database.  All subsequent
+passphrase validation checks test against the salt and passphrase SHA2 hash.
+
+IP whitelists may be maintained per user.  If a user is set to require an IP
+check, then the user validates only if his passphrase authenticates AND his
+IP is found in the whitelist associated with his user id.
+
+Users may be given zero or more roles.  Roles are simple strings, and may be
+used by an authorization framework to determine what aspects of an
+application's functionality will be available to a given user, or how the
+functionality is presented.
+
+DEPENDENCIES
+
+This module requires DBIx::Connector, and Authen::Passphrase::SaltedSHA512.
+It also requires a database back-end.  The test suite will use DBD::SQLite,
+but it has also been tested with DBD::mysql.  None of these dependencies could
+be considered light-weight.  The dependency chain of this module is
+indicative of the difficulty in assuring cryptographically strong random
+salt generation, reliable SHA2-512 hashing of passphrases, fork-safe database
+connectivity, and transactional commits for inserts and updates spanning
+multiple tables. 
+
+CONFIGURATION
+
+The database used will need at least three User-related tables.  In their
+simplest form, a minimal recommendation would be:
+
+
+    TABLE:          users
+    COLUMNS:        userid      VARCHAR(24)  NOT NULL DEFAULT ''
+                    salt        CHAR(128)    NOT NULL DEFAULT ''
+                    password    CHAR(128)    NOT NULL DEFAULT ''
+                    ip_required tinyint(1)   NOT NULL DEFAULT '1'
+                    username    VARCHAR(40)  DEFAULT NULL
+                    email       VARCHAR(320) DEFAULT NULL
+    PRIMARY KEY:    userid
+
+
+    TABLE:          user_ips
+    COLUMNS:        userid      VARCHAR(24)  NOT NULL DEFAULT ''
+                    ip          INT(10) UNSIGNED NOT NULL DEFAULT '0'
+    PRIMARY KEY:    userid, ip
+
+
+    TABLE:          user_roles
+    COLUMNS:        userid      VARCHAR(24) NOT NULL DEFAULT ''
+                    role        VARCHAR(40) NOT NULL DEFAULT ''
+    PRIMARY KEY:    userid, role
+
+For convenience, configuration scripts are provided that will auto-generate
+the minimal schema within a SQLite or MySQL database.  The SQLite database is
+probably only useful for testing, as it lacks many of the security measures
+present in web-stack-quality databases.  The configuration scripts are found
+in the scripts/ directory within the distribution's build directory tree.
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+	perl Makefile.PL
+	make
+	make test
+	make install
+
+SUPPORT AND DOCUMENTATION
+
+After installing, you can find documentation for this module with the
+perldoc command.
+
+    perldoc Class::User::DBI
+
+You can also look for information at:
+
+    RT, CPAN's request tracker (report bugs here)
+        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Class-User-DBI
+
+    AnnoCPAN, Annotated CPAN documentation
+        http://annocpan.org/dist/Class-User-DBI
+
+    CPAN Ratings
+        http://cpanratings.perl.org/d/Class-User-DBI
+
+    Search CPAN
+        http://search.cpan.org/dist/Class-User-DBI/
+
+
+LICENSE AND COPYRIGHT
+
+Copyright (C) 2012 David Oswald
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
+
+See http://dev.perl.org/licenses/ for more information.
