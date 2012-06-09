@@ -475,11 +475,16 @@ Build the tables for a minimal installation... C<IF NOT EXISTS>.
 
 =head2 	list_users
 
+This is a class method.  Returns a reference to an array containing all
+usernames.
+
 
 =head2  configure_db
 
 
 =head2 	new
+
+# my $user_obj = new( $connector, $userid )
 
 
 =head2 	fetch_user
