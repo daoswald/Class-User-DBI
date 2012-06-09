@@ -5,7 +5,7 @@ use warnings;
 use Test::More;
 use Class::User::DBI;
 
-# use Data::Dumper;
+use Data::Dumper;
 
 use DBIx::Connector;
 
@@ -45,7 +45,7 @@ subtest 'Class::User::DBI use and can tests.' => sub {
     can_ok(
         'Class::User::DBI', qw(
           new             add_user        userid          validated
-          validate_user   load_user       fetch_valid_ips exists_user
+          validate   load_profile       fetch_valid_ips exists_user
           delete_user     delete_ips      add_ips         update_email
           update_username update_password list_users      fetch_roles
           add_role        delete_role     can_role
@@ -102,38 +102,38 @@ subtest "Tests for $appuser" => sub {
     my $query_handle = $user->_db_run_ex( 'SELECT * FROM users', () );
     isa_ok( $query_handle, 'DBI::st', '_db_run_ex():  ' );
 
-    my $rv = $user->fetch_user();
+    my $rv = $user->fetch_credentials();
 
-    is( ref($rv), 'HASH', 'fetch_user():   Returns a hashref.' );
+    is( ref($rv), 'HASH', 'fetch_credentials():   Returns a hashref.' );
     ok( exists( $rv->{valid_ips} ),
-        'fetch_user():   valid_ips   field found.' );
+        'fetch_credentials():   valid_ips   field found.' );
     ok( exists( $rv->{ip_required} ),
-        'fetch_user():   ip_required field found.' );
-    ok( exists( $rv->{salt_hex} ), 'fetch_user():   salt_hex    field found.' );
-    ok( exists( $rv->{pass_hex} ), 'fetch_user():  pass_hex    field found.' );
-    ok( exists( $rv->{userid} ),   'fetch_user():  userid    field found.' );
-    is( $rv->{userid}, $appuser, 'fetch_user():  Correct userid found.' );
+        'fetch_credentials():   ip_required field found.' );
+    ok( exists( $rv->{salt_hex} ), 'fetch_credentials():   salt_hex    field found.' );
+    ok( exists( $rv->{pass_hex} ), 'fetch_credentials():  pass_hex    field found.' );
+    ok( exists( $rv->{userid} ),   'fetch_credentials():  userid    field found.' );
+    is( $rv->{userid}, $appuser, 'fetch_credentials():  Correct userid found.' );
     is( ref( $rv->{valid_ips} ),
-        'ARRAY', 'fetch_user():  valid_ips contains aref.' );
+        'ARRAY', 'fetch_credentials():  valid_ips contains aref.' );
     is( $rv->{ip_required} == 0 || $rv->{ip_required} == 1,
-        1, 'fetch_user():  ip_required is a Boolean value.' );
+        1, 'fetch_credentials():  ip_required is a Boolean value.' );
     like( $rv->{salt_hex}, qr/^[[:xdigit:]]{128}$/,
-        'fetch_user():  salt_hex has 128 hex digits.' );
+        'fetch_credentials():  salt_hex has 128 hex digits.' );
     like( $rv->{pass_hex}, qr/^[[:xdigit:]]{128}$/,
-        'fetch_user():  pass_hex has 128 hex digits.' );
-    is( scalar( @{ $user->fetch_valid_ips } ),
+        'fetch_credentials():  pass_hex has 128 hex digits.' );
+    is( scalar( $user->fetch_valid_ips ),
         0, "fetch_valid_ips():  $appuser has no IP's." );
     is( $user->exists_user, $appuser, "exists_user(): $appuser exists in DB." );
-    is( $user->validate_user('wrong pass'),
-        undef, 'validate_user: Reject incorrect password with undef.' );
+    is( $user->validate('wrong pass'),
+        undef, 'validate: Reject incorrect password with undef.' );
     is( $user->validated, 0,
         'validated():   Flag still false after rejected validation.' );
 
-    is( $user->validate_user($appuser_pass),
-        $appuser, "validate_user(): $appuser validates by password." );
+    is( $user->validate($appuser_pass),
+        $appuser, "validate(): $appuser validates by password." );
     is( $user->validated, 1,
             'validated():   Flag set to true after successful call '
-          . 'to validate_user()' );
+          . 'to validate()' );
     $user->validated(0);
     is( $user->validated, 0,
         'validated():   User validation flag may be flipped to not-validated.'
@@ -142,8 +142,8 @@ subtest "Tests for $appuser" => sub {
     is( $user->validated, 0,
             'validated():   User validation flag may not be explicitly set '
           . 'true via accessor.' );
-    my $load = $user->load_user;
-    is( ref($load), 'HASH', 'load_user(): Returns a hashref.' );
+    my $load = $user->load_profile;
+    is( ref($load), 'HASH', 'load_profile(): Returns a hashref.' );
     is( $load->{userid}, $appuser,
         'load_userid()->{userid}: Returns proper user ID.' );
     like( $load->{email}, qr/@/,
@@ -166,37 +166,37 @@ subtest "Tests for $appuser_ip_req." => sub {
         );
     }
     isa_ok( $user, 'Class::User::DBI', 'new():         ' );
-    is( grep( { $_ eq $test_ip } @{ $user->fetch_valid_ips } ),
+    is( grep( { $_ eq $test_ip } $user->fetch_valid_ips ),
         1, 'fetch_valid_ips(): Found a known IP in the DB.' );
-    is( $user->validate_user($appuser_pass),
+    is( $user->validate($appuser_pass),
         undef,
-        'validate_user(): Reject user requiring IP if no IP is supplied.' );
-    is( $user->validate_user( $appuser_pass, '127.0.0.1' ),
+        'validate(): Reject user requiring IP if no IP is supplied.' );
+    is( $user->validate( $appuser_pass, '127.0.0.1' ),
         undef,
-        'validate_user(): Reject user requiring IP if wrong IP is supplied.' );
+        'validate(): Reject user requiring IP if wrong IP is supplied.' );
     is(
-        $user->validate_user( 'wrong pass', $test_ip ),
+        $user->validate( 'wrong pass', $test_ip ),
         undef,
-        'validate_user(): Reject user requiring IP if incorrect pass '
+        'validate(): Reject user requiring IP if incorrect pass '
           . 'with correct IP.'
     );
-    is( $user->validate_user( $appuser_pass, $test_ip ),
+    is( $user->validate( $appuser_pass, $test_ip ),
         $appuser_ip_req,
-        'validate_user(): Accept user if correct password and correct IP.' );
+        'validate(): Accept user if correct password and correct IP.' );
 
-    my (@found) = grep { $_ eq $test_ip2 } @{ $user->fetch_valid_ips() };
+    my (@found) = grep { $_ eq $test_ip2 } $user->fetch_valid_ips();
 
     if (@found) {
-        $user->delete_ips( [@found] );
+        $user->delete_ips( @found );
     }
 
-    is( grep( { $_ eq $test_ip2 } @{ $user->fetch_valid_ips() } ),
+    is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
         0, "add_ips() test:  Initial state: $test_ip2 not in database." );
-    $user->add_ips( [$test_ip2] );
-    is( grep( { $_ eq $test_ip2 } @{ $user->fetch_valid_ips() } ),
+    $user->add_ips( $test_ip2 );
+    is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
         1, "add_ips() test:  $test_ip2 successfully added." );
-    $user->delete_ips( [$test_ip2] );
-    is( grep( { $_ eq $test_ip2 } @{ $user->fetch_valid_ips() } ),
+    $user->delete_ips( $test_ip2 );
+    is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
         0, "delete_ips():    $test_ip2 successfully deleted." );
 
     done_testing();
@@ -214,19 +214,19 @@ subtest 'add_user() tests.' => sub {
         }
     );
     is(
-        $user->add_ips( [ '192.168.0.100', '201.202.100.5', '127.0.0.1' ] ),
+        $user->add_ips( '192.168.0.100', '201.202.100.5', '127.0.0.1' ),
         1,
         'add_ips(): Gracefully drop ip adds for ips that are already '
           . 'in the DB.'
     );
     is( $id, 'saeed', 'add_user():  Properly returns the user id.' );
     is( defined( $user->exists_user ), 1, 'New user was added.' );
-    is( $user->validate_user('Super Me!'),
+    is( $user->validate('Super Me!'),
         undef, 'New user fails to validate if ip_req set, and no IP given.' );
-    is( $user->validate_user( 'Super Me!', '192.168.0.100' ),
+    is( $user->validate( 'Super Me!', '192.168.0.100' ),
         'saeed', 'New user validates.' );
     is( $user->delete_user, 1, 'delete_user(): Returns truth for success.' );
-    is( scalar @{ $user->fetch_valid_ips },
+    is( scalar $user->fetch_valid_ips,
         0, 'delete_user(): All IPs deleted for deleted user.' );
     is( $user->exists_user, undef,
         'exists_user(): Deleted user no longer exists in DB.' );
@@ -245,12 +245,12 @@ subtest 'User IDs should be forced to lower case.' => sub {
 
 subtest 'update_email() tests.' => sub {
     my $user      = Class::User::DBI->new( $conn, $appuser );
-    my $stats_ref = $user->load_user;
+    my $stats_ref = $user->load_profile;
     my $old_email = $stats_ref->{email};
     is( $old_email, 'fake@address.com',
-        'load_user() found correct original email address.' );
+        'load_profile() found correct original email address.' );
     $user->update_email('newfake@address.com');
-    $stats_ref = $user->load_user;
+    $stats_ref = $user->load_profile;
     my $new_email = $stats_ref->{email};
     is( $new_email, 'newfake@address.com', 'Email address correctly altered.' );
     $user->update_email($old_email);    # Reset to original state.
@@ -262,11 +262,11 @@ subtest 'update_email() tests.' => sub {
 
 subtest 'update_username() tests.' => sub {
     my $user      = Class::User::DBI->new( $conn, $appuser );
-    my $stats_ref = $user->load_user;
+    my $stats_ref = $user->load_profile;
     my $old_name  = $stats_ref->{username};
-    is( $old_name, 'Test User', 'load_user() found correct user name.' );
+    is( $old_name, 'Test User', 'load_profile() found correct user name.' );
     $user->update_username('Cool Test User');
-    $stats_ref = $user->load_user;
+    $stats_ref = $user->load_profile;
     my $new_name = $stats_ref->{username};
     is( $new_name, 'Cool Test User', 'update_username() set a new user name.' );
     $user->update_username($old_name);
@@ -286,24 +286,24 @@ subtest 'update_password() tests.' => sub {
             email    => 'email@address.com',
         }
     );
-    is( $user->validate_user('Pass1'),
+    is( $user->validate('Pass1'),
         'passupdate_user', 'New user validates.' );
-    is( $user->update_password( 'Pass1', 'Pass2' ),
+    is( $user->update_password( 'Pass2', 'Pass1' ),
         'passupdate_user', 'Pass updated.' );
     my $user2 = Class::User::DBI->new( $conn, 'passupdate_user' );
-    is( $user2->validate_user('Pass2'),
+    is( $user2->validate('Pass2'),
         'passupdate_user', 'User validates against new passphrase.' );
     $user2->delete_user;
     done_testing;
 };
 
 subtest 'list_users() tests.' => sub {
-    my $user_aref = Class::User::DBI->list_users($conn);
-    is( ref($user_aref), 'ARRAY',
-        'Class::User::DBI->list_users() returns an arrayref.' );
-    is( scalar( grep { $_->[0] eq $appuser } @{$user_aref} ),
+    my @users = Class::User::DBI->list_users($conn);
+    print "Users:\n";
+    print Dumper @users;
+    is( scalar( grep { $_->[0] eq $appuser } @users ),
         1, 'Found our test user.' );
-    is( scalar @{$user_aref} > 1, 1, 'Found more than one user.' );
+    is( scalar @users > 1, 1, 'Found more than one user.' );
     done_testing();
 };
 

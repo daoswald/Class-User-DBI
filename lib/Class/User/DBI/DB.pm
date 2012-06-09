@@ -15,10 +15,10 @@ $VERSION = eval $VERSION;            ## no critic (eval)
 # SQL queries used throughout Class::User::DBI.
 our %QUERY = (
     SQL_fetch_valid_ips => 'SELECT ip FROM user_ips WHERE userid = ?',
-    SQL_fetch_user =>
+    SQL_fetch_credentials   =>
       'SELECT salt, password, ip_required FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
-    SQL_load_user =>
+    SQL_load_profile =>
       'SELECT userid, username, email FROM users WHERE userid = ?',
     SQL_add_ips    => 'INSERT INTO user_ips ( userid, ip ) VALUES( ?, ? )',
     SQL_delete_ips => 'DELETE FROM user_ips WHERE userid = ? AND ip = ?',
