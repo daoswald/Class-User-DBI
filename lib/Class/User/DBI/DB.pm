@@ -15,7 +15,7 @@ $VERSION = eval $VERSION;            ## no critic (eval)
 # SQL queries used throughout Class::User::DBI.
 our %QUERY = (
     SQL_fetch_valid_ips => 'SELECT ip FROM user_ips WHERE userid = ?',
-    SQL_fetch_credentials   =>
+    SQL_fetch_credentials =>
       'SELECT salt, password, ip_required FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
     SQL_load_profile =>
@@ -34,8 +34,8 @@ our %QUERY = (
     SQL_list_users  => 'SELECT userid, username, email FROM users',
     SQL_fetch_roles => 'SELECT role FROM user_roles WHERE userid = ?',
     SQL_can_role => 'SELECT role FROM user_roles WHERE userid = ? AND role = ?',
-    SQL_add_role => 'INSERT INTO user_roles ( userid, role ) VALUES ( ?, ? )',
-    SQL_delete_role => 'DELETE FROM user_roles WHERE userid = ? AND role = ?',
+    SQL_add_roles => 'INSERT INTO user_roles ( userid, role ) VALUES ( ?, ? )',
+    SQL_delete_roles => 'DELETE FROM user_roles WHERE userid = ? AND role = ?',
     SQL_configure_db_users => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS users (
         userid      VARCHAR(24)           NOT NULL DEFAULT '',

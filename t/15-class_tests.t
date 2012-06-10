@@ -5,7 +5,7 @@ use warnings;
 use Test::More;
 use Class::User::DBI;
 
-use Data::Dumper;
+# use Data::Dumper;
 
 use DBIx::Connector;
 
@@ -45,10 +45,11 @@ subtest 'Class::User::DBI use and can tests.' => sub {
     can_ok(
         'Class::User::DBI', qw(
           new             add_user        userid          validated
-          validate   load_profile       fetch_valid_ips exists_user
+          validate        load_profile    fetch_valid_ips exists_user
           delete_user     delete_ips      add_ips         update_email
           update_username update_password list_users      fetch_roles
-          add_role        delete_role     can_role
+          add_roles       delete_roles    can_role        configure_db
+          _db_conn        _db_run_ex
           )
     );
     done_testing();
@@ -109,17 +110,21 @@ subtest "Tests for $appuser" => sub {
         'fetch_credentials():   valid_ips   field found.' );
     ok( exists( $rv->{ip_required} ),
         'fetch_credentials():   ip_required field found.' );
-    ok( exists( $rv->{salt_hex} ), 'fetch_credentials():   salt_hex    field found.' );
-    ok( exists( $rv->{pass_hex} ), 'fetch_credentials():  pass_hex    field found.' );
-    ok( exists( $rv->{userid} ),   'fetch_credentials():  userid    field found.' );
-    is( $rv->{userid}, $appuser, 'fetch_credentials():  Correct userid found.' );
+    ok( exists( $rv->{salt_hex} ),
+        'fetch_credentials():   salt_hex    field found.' );
+    ok( exists( $rv->{pass_hex} ),
+        'fetch_credentials():  pass_hex    field found.' );
+    ok( exists( $rv->{userid} ),
+        'fetch_credentials():  userid    field found.' );
+    is( $rv->{userid}, $appuser,
+        'fetch_credentials():  Correct userid found.' );
     is( ref( $rv->{valid_ips} ),
         'ARRAY', 'fetch_credentials():  valid_ips contains aref.' );
     is( $rv->{ip_required} == 0 || $rv->{ip_required} == 1,
         1, 'fetch_credentials():  ip_required is a Boolean value.' );
-    like( $rv->{salt_hex}, qr/^[[:xdigit:]]{128}$/,
+    like( $rv->{salt_hex}, qr/^[[:xdigit:]]{128}$/x,
         'fetch_credentials():  salt_hex has 128 hex digits.' );
-    like( $rv->{pass_hex}, qr/^[[:xdigit:]]{128}$/,
+    like( $rv->{pass_hex}, qr/^[[:xdigit:]]{128}$/x,
         'fetch_credentials():  pass_hex has 128 hex digits.' );
     is( scalar( $user->fetch_valid_ips ),
         0, "fetch_valid_ips():  $appuser has no IP's." );
@@ -169,8 +174,7 @@ subtest "Tests for $appuser_ip_req." => sub {
     is( grep( { $_ eq $test_ip } $user->fetch_valid_ips ),
         1, 'fetch_valid_ips(): Found a known IP in the DB.' );
     is( $user->validate($appuser_pass),
-        undef,
-        'validate(): Reject user requiring IP if no IP is supplied.' );
+        undef, 'validate(): Reject user requiring IP if no IP is supplied.' );
     is( $user->validate( $appuser_pass, '127.0.0.1' ),
         undef,
         'validate(): Reject user requiring IP if wrong IP is supplied.' );
@@ -187,15 +191,15 @@ subtest "Tests for $appuser_ip_req." => sub {
     my (@found) = grep { $_ eq $test_ip2 } $user->fetch_valid_ips();
 
     if (@found) {
-        $user->delete_ips( @found );
+        $user->delete_ips(@found);
     }
 
     is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
         0, "add_ips() test:  Initial state: $test_ip2 not in database." );
-    $user->add_ips( $test_ip2 );
+    $user->add_ips($test_ip2);
     is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
         1, "add_ips() test:  $test_ip2 successfully added." );
-    $user->delete_ips( $test_ip2 );
+    $user->delete_ips($test_ip2);
     is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
         0, "delete_ips():    $test_ip2 successfully deleted." );
 
@@ -286,8 +290,7 @@ subtest 'update_password() tests.' => sub {
             email    => 'email@address.com',
         }
     );
-    is( $user->validate('Pass1'),
-        'passupdate_user', 'New user validates.' );
+    is( $user->validate('Pass1'), 'passupdate_user', 'New user validates.' );
     is( $user->update_password( 'Pass2', 'Pass1' ),
         'passupdate_user', 'Pass updated.' );
     my $user2 = Class::User::DBI->new( $conn, 'passupdate_user' );
@@ -299,8 +302,6 @@ subtest 'update_password() tests.' => sub {
 
 subtest 'list_users() tests.' => sub {
     my @users = Class::User::DBI->list_users($conn);
-    print "Users:\n";
-    print Dumper @users;
     is( scalar( grep { $_->[0] eq $appuser } @users ),
         1, 'Found our test user.' );
     is( scalar @users > 1, 1, 'Found more than one user.' );
@@ -310,22 +311,23 @@ subtest 'list_users() tests.' => sub {
 subtest 'Roles tests.' => sub {
     my $user = Class::User::DBI->new( $conn, $appuser );
     if ( !$user->can_role('tupitar') ) {
-        $user->add_role('tupitar');
+        $user->add_roles('tupitar');
     }
-    my $roles_aref = $user->fetch_roles;
-    is( ref $roles_aref, 'ARRAY', 'fetch_roles() returns an arrayref.' );
-    is( scalar( grep { $_ eq 'tupitar' } @{$roles_aref} ),
-        1, 'fetch_roles(): tupitar is a role.' );
+    my @roles = $user->fetch_roles;
+    ok(
+        grep( { $_ eq 'tupitar' } @roles ),
+        'fetch_roles() found role tupitar.'
+    );
     ok( $user->can_role('tupitar'), 'can_role(): Test user can tupitar.' );
     ok( !$user->can_role('frobcinate'),
         'can_role(): Test user can not frobcinate (yet).' );
-    is( $user->add_role('frobcinate'),
-        'frobcinate', 'add_role(): Added frobcinate role.' );
+    is( $user->add_roles('frobcinate'),
+        1, 'add_roles(): Added frobcinate role.' );
     ok( $user->can_role('frobcinate'),
         'can_role(): Test user can now frobcinate.' );
     ok(
-        $user->delete_role('frobcinate'),
-        'delete_role(): Deleted frobcinate role.'
+        $user->delete_roles('frobcinate'),
+        'delete_roles(): Deleted frobcinate role.'
     );
     ok( !$user->can_role('frobcinate'),
         'can_role(): Test user can no longer frobcinate.' );
@@ -337,7 +339,7 @@ subtest 'Roles tests.' => sub {
             email    => 'this@that.com'
         }
     );
-    $user2->add_role('frobcinate');
+    $user2->add_roles('frobcinate');
     $user2->delete_user;
     ok( !$user2->can_role('frobcinate'),
         'delete_user: Deleted user can no longer frobcinate.' );
@@ -347,14 +349,3 @@ subtest 'Roles tests.' => sub {
 done_testing();
 
 __END__
-
-
-
-TODO:
-
-Set up the tests to create the test users initially, and clean up afterward.
-Set up the DB to accept a 'tester' user, and convert testing to tester user.
-Split up modules and tests.
-Figure out how to install the module in the application directory tree.
-User::Credentials::Provider::DBI
-

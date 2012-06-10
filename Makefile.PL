@@ -20,6 +20,7 @@ WriteMakefile(
         'Test::More'                       => 0,
         'Authen::Passphrase::SaltedSHA512' => 0,
         'DBIx::Connector'                  => 0,
+        'List::MoreUtils'                  => 0,
     },
     META_MERGE => {
         provides  => 'Class::User::DBI.pm',

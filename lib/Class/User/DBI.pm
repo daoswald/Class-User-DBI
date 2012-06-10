@@ -119,7 +119,8 @@ sub fetch_valid_ips {
 # Fetch user's salt_hex, pass_hex, ip_required, and valid ip's from database.
 sub fetch_credentials {
     my $self = shift;
-    my $sth  = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_fetch_credentials},
+    my $sth =
+      $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_fetch_credentials},
         $self->userid );
     my ( $salt_hex, $pass_hex, $ip_required ) = $sth->fetchrow_array;
     return if not defined $salt_hex;    # User wasn't found.
@@ -129,7 +130,7 @@ sub fetch_credentials {
         salt_hex    => $salt_hex,
         pass_hex    => $pass_hex,
         ip_required => $ip_required,
-        valid_ips   => [ @valid_ips ],
+        valid_ips   => [@valid_ips],
     };
 }
 
@@ -175,7 +176,7 @@ sub exists_user {
 # May be useful later on if we add user information.
 sub load_profile {
     my $self = shift;
-    my $sth  = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_load_profile},
+    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_load_profile},
         $self->userid );
     my $hr = $sth->fetchrow_hashref;
     return $hr;
@@ -188,12 +189,11 @@ sub add_ips {
     # We don't want to insert IP's already in the DB.
     my @ips_in_db = $self->fetch_valid_ips;
     my %uniques;
-    @uniques{ @ips_in_db } = ();
+    @uniques{@ips_in_db} = ();
     my @ips_to_insert = grep { !exists $uniques{$_} } @ips;
     return 0 if !@ips_to_insert;
 
     # Prepare the userid,ip bundles for our insert query.
-    ## no critic (builtin)
     my @execution_param_bundles =
       map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_to_insert;
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_add_ips},
@@ -207,9 +207,8 @@ sub delete_ips {
     return if !$self->exists_user;
     my @ips_in_db = $self->fetch_valid_ips;
     my %found;
-    @found{ @ips_in_db } = ();
+    @found{@ips_in_db} = ();
     my @ips_for_deletion = grep { exists $found{$_} } @ips;
-    ## no critic (Builtin)
     my @execution_param_bundles =
       map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_for_deletion;
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_ips},
@@ -224,9 +223,10 @@ sub add_user {
     return if not length $password;     # We require a password.
     return if $self->exists_user;
 
-    my $ip_req   = $userinfo->{ip_req}   // 0;     # Default to not required.
-    my $username = $userinfo->{username} // q{};
-    my $email    = $userinfo->{email}    // q{};
+    # Default to IP not required.
+    my $ip_req   = defined $userinfo->{ip_req}   ? $userinfo->{ip_req}   : 0;
+    my $username = defined $userinfo->{username} ? $userinfo->{username} : q{};
+    my $email    = defined $userinfo->{email}    ? $userinfo->{email}    : q{};
 
     my $ips_aref =
       exists( $userinfo->{ips_aref} )
@@ -259,7 +259,7 @@ sub update_password {
     return if !$self->exists_user;
 
     # If an old passphrase is supplied, only update if it validates.
-    if( defined $oldpass ) {
+    if ( defined $oldpass ) {
         my $credentials = $self->fetch_credentials;
         my $auth        = Authen::Passphrase::SaltedSHA512->new(
             salt_hex => $credentials->{salt_hex},
@@ -308,19 +308,14 @@ sub delete_user {
     return 1;
 }
 
-# my $cans_aref = $user->fetch_roles;
-# my $success      = $user->add_role( $new_role );
-# my $success     = $user->delete_role( $old_role );
-# my $can_do    = $user->can_role( $role_to_test );
-
 sub fetch_roles {
     my $self = shift;
     return if !$self->exists_user;
     my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_fetch_roles},
         $self->userid );
     my $roles_aoa = $sth->fetchall_arrayref;
-    my $roles_aref = [ map { $_->[0] } @{$roles_aoa} ];
-    return $roles_aref;
+    my @roles = map { $_->[0] } @{$roles_aoa};
+    return @roles;
 }
 
 sub can_role {
@@ -331,22 +326,25 @@ sub can_role {
     return $sth->fetchrow_array;
 }
 
-sub add_role {
-    my ( $self, $role ) = @_;
+sub add_roles {
+    my ( $self, @roles ) = @_;
     return if !$self->exists_user;
-    return if !defined $role || !$role;    # Prevent undefined or 'false' roles.
-    return $role if $self->can_role($role);
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_add_role},
-        $self->userid, $role );
-    return $role;
+    my @roles_to_insert =
+      grep { defined $_ && $_ && !$self->can_role($_) } @roles;
+    my @prepared_inserts = map { [ $self->userid, $_ ] } @roles_to_insert;
+    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_add_roles},
+        @prepared_inserts );
+    return scalar @prepared_inserts;
 }
 
-sub delete_role {
-    my ( $self, $role ) = @_;
+sub delete_roles {
+    my ( $self, @roles ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_role},
-        $self->userid, $role );
-    return $self->userid;
+    my @roles_to_delete = grep { $self->can_role($_) } @roles;
+    my @prepared_deletes = map { [ $self->userid, $_ ] } @roles_to_delete;
+    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_roles},
+        @prepared_deletes );
+    return scalar @prepared_deletes;
 }
 
 # Class methods
@@ -377,38 +375,6 @@ sub configure_db {
 
 1;
 
-# Public API:
-# my $user_obj = new( $connector, $userid )
-#
-# my $user_id  = $user->add_user(
-#        {
-#            password => $password,
-#            ip_req   => $bool_ip_req,
-#            ips      => [ '192.168.0.100', '201.202.100.5' ], # aref ip's.
-#            username => $full_name,
-#            email    => $email,
-#        }
-#    );
-#
-# my $userid      = $user->userid;
-# my $validated   = $user->validated;
-# my $invalidated = $user->validated(0);
-# my $is_valid    = $user->validate( $pass, $opt_ips );
-# my $info        = $user->load_profile;
-# my $valid_ips   = $user->fetch_valid_ips;
-# my $user_exists = $user->exists_user;
-# my $deleted     = $user->delete_user;
-# my $del_count   = $user->delete_ips( @ips );
-# my $add_count   = $user->add_ips( @ips );
-# my $new_email   = $user->update_email( 'new@email.address' );
-# my $new_name    = $user->update_username( 'Cool New User Name' );
-# my $userid      = $user->update_password( 'Old Pass', 'New Pass' );
-# my $users_aref  = $class->list_users;
-# my $cans_aref   = $user->fetch_roles;
-# my $success     = $user->add_role( $new_role );
-# my $success     = $user->delete_role( $role );
-# my $can_do      = $user->can_role( $role );
-
 __END__
 
 =head1 NAME
@@ -425,11 +391,25 @@ Through a DBIx::Connector object, this module models a "User" class, with
 login credentials, and access roles.  Login credentials include a passphrase,
 and optionally per user IP whitelisting.
 
-    Class::User::DBI->configure_db;     # Set up the tables for a user DB.
-    
+    # Set up a connection using DBIx::Connector:
+    # MySQL database settings:
+
+    my $conn = DBIx::Connector->new(
+        'dbi:mysql:database=cudbi_tests, 'testing_user', 'testers_pass',
+        {
+            RaiseError => 1,
+            AutoCommit => 1,
+        }
+    );
+
+
+    # Now we can play with Class::User::DBI:
+
+    Class::User::DBI->configure_db( $conn );  # Set up the tables for a user DB.
+
     my @user_list = Class::User::DBI->list_users;
-    
-    my $user = new( $connector, $userid );
+
+    my $user = new( $conn, $userid );
 
     my $user_id  = $user->add_user(
         {
@@ -451,42 +431,46 @@ and optionally per user IP whitelisting.
 
     my $is_valid    = $user->validate( $pass ); # Authentiate without IP.
 
-    my $info        = $user->load_profile;   # Load the user's profile.
+    my $info_href   = $user->load_profile;   # Load the user's profile.
 
     my @valid_ips   = $user->fetch_valid_ips;
 
     my $user_exists = $user->exists_user;
 
-    my $deleted     = $user->delete_user;
+    my $success     = $user->delete_user;
 
     my $del_count   = $user->delete_ips( @ips );
 
     my $add_count   = $user->add_ips( @ips );
 
-    my $new_email   = $user->update_email( 'new@email.address' );
+    my $success     = $user->update_email( 'new@email.address' );
 
-    my $new_name    = $user->update_username( 'Cool New User Name' );
+    my $success     = $user->update_username( 'Cool New User Name' );
 
-    my $userid      = $user->update_password( 'Old Pass', 'New Pass' );
+    my $success     = $user->update_password( 'Old Pass', 'New Pass' );
 
-    my $userid      = $user->update_password( 'New Pass' );
+    my $success     = $user->update_password( 'New Pass' );
 
     my $can_do      = $user->can_role( $role );
-    
+
     my $add_count   = $user->add_roles( @roles );
-    
+
     my $del_count   = $user->delete_roles( @roles );
-    
+
     my @roles       = $user->fetch_roles;
 
 
 =head1 DESCRIPTION
 
-The module is designed to simplify user logins, and basic administrative user
-maintenance.  Passphrases are salted with a 512 bit random salt (unique per
-user) using a cryptographically strong random number generator, and converted
-to a SHA2-512 digest before being stored in the database.  All subsequent
-passphrase validation checks test against the salt and passphrase SHA2 hash.
+The module is designed to simplify user logins, authentication, authorization,
+and basic administrative user maintenance.  It stores user credentials, roles,
+and basic user information in a database via a DBIx::Connector database
+connection.
+
+User passphrases are salted with a 512 bit random salt (unique per user) using
+a cryptographically strong random number generator, and converted to a SHA2-512
+digest before being stored in the database.  All subsequent passphrase
+validation checks test against the salt and passphrase SHA2 hash.
 
 IP whitelists may be maintained per user.  If a user is set to require an IP
 check, then the user validates only if his passphrase authenticates AND his
@@ -497,63 +481,27 @@ used by an authorization framework to determine what aspects of an
 application's functionality will be available to a given user, or how the
 functionality is presented.
 
-To use: Instantiate a user object.  This user's initial state holds only a
+To use, instantiate a user object.  This user's initial state holds only a
 userid.  Validate, load user info, load roles, test roles... read on.
 
 =head1 EXPORT
 
-Nothing is exported.  There are three class methods:
+Nothing is exported.  There are many object methods, and three class methods,
+described in the next section.
 
-=over 4
-
-=item * C<new()>
-
-The constructor.
-
-=item * C<list_users()>
-
-Obtain a list of all users in the database.
-
-=item * C<configure_db>
-
-Build the tables for a minimal installation... C<IF NOT EXISTS>.
-
-=back
 
 =head1 SUBROUTINES/METHODS
 
 
-=head2 	list_users
-
-    my @users = Class::User::DBI->list_users( $connector );
-    foreach my $listed_user ( @users ) {
-        my( $userid, $username, $email ) = @{$listed_user};
-        print "userid: ($userid).  username: ($username).  email: ($email).\n";
-    }
-
-This is a class method.  Pass a valid DBIx::Connector as a parameter. Returns 
-a list of arrayrefs.  Each anonymous array contains C<userid>, C<username>, 
-and C<email>.
-
-
-=head2  configure_db
-
-    Class::User::DBI->configure_db( $connector );
-    
-This is a class method.  Pass a valid DBIx::Connector as a parameter.  Builds
-a minimal set of database tables in support of the Class::User::DBI.
-
-The tables created will be C<users>, C<user_ips>, and C<user_roles>.
-
-
 =head2 	new
+(The constructor -- Class method.)
 
     my $user_obj = Class::User::DBI->new( $connector, $userid );
 
-Instantiates a new Class::User::DBI object in behalf of a target user on a 
+Instantiates a new Class::User::DBI object in behalf of a target user on a
 database handled by the DBIx::Connector.
 
-The user object may be accessed and manipulated through the methods listed 
+The user object may be accessed and manipulated through the methods listed
 below.
 
 
@@ -574,7 +522,7 @@ describes the user's credentials.  The structure looks like this:
 
     $href = {
         userid      => $userid,     # The target user's userid.
-        
+
         salt_hex    => $salt,       # A 128 hex-character representation of
                                     # the user's random salt.
 
@@ -589,12 +537,12 @@ describes the user's credentials.  The structure looks like this:
             '129.168.0.10',
         ],
     };
-        
-A typical usage probably won't require calling this function directly very 
-often, if at all.  In most cases where it would be useful to look at the salt, 
-the passphrase digest, and IP whitelists, the 
-C<< $user->validate( $passphrase, $ip ) >> method is easier to use and less 
-prone to error.  But for those cases I haven't considered, the 
+
+A typical usage probably won't require calling this function directly very
+often, if at all.  In most cases where it would be useful to look at the salt,
+the passphrase digest, and IP whitelists, the
+C<< $user->validate( $passphrase, $ip ) >> method is easier to use and less
+prone to error.  But for those cases I haven't considered, the
 C<fetch_credentials()> method exists.
 
 =head2 	load_profile
@@ -604,7 +552,7 @@ C<fetch_credentials()> method exists.
         print "$field   => $user_info_href->{$field}\n";
     }
 
-Returns a reference to an anonymous hash containing the user's basic 
+Returns a reference to an anonymous hash containing the user's basic
 profile information.  Currently the datastructure looks like this:
 
     my $user_info_href = {
@@ -612,8 +560,8 @@ profile information.  Currently the datastructure looks like this:
         username    => $username,   # The full user name as stored in the DB.
         email       => $email,      # The email stored in the DB for this user.
     };
-    
-Although additional fields could be added to the database table and this 
+
+Although additional fields could be added to the database table and this
 module could be subclassed to process those fields, it's probably easier to
 just add another table keyed off of the unique C<userid> field, containing
 any additional information a given application requires for a user.
@@ -623,15 +571,15 @@ any additional information a given application requires for a user.
     $user->delete_user;
 
 Removes the user from the database, along with the user's IP whitelist, and
-roles.  Also sets the C<< $user->validated >>, and C<< $user->exists_user >> 
+roles.  Also sets the C<< $user->validated >>, and C<< $user->exists_user >>
 flags to false.
 
 
 =head2 	exists_user
 
 Checks the database to verify that the user exists.  As this method is used
-internally frequently its B<positive> result is cached to minimize database 
-queries.  Methods that would invalidate the existence of the user in the 
+internally frequently its B<positive> result is cached to minimize database
+queries.  Methods that would invalidate the existence of the user in the
 database, such as C<< $user->delete_user >> will remove the cache entry, and
 subsequent tests will access the database on each call to C<exists_user()>,
 until such time that the result flips to positive again.
@@ -640,35 +588,35 @@ until such time that the result flips to positive again.
 
     my $success = $self->add_user( {
         username    => $user_full_name,     # Optional field. Default q{}.
-        
+
         password    => $user_passphrase,    # Clear text password.
                                             # Required field. No length limit.
-                                            
+
         email       => $user_email,         # Optional field.  Default q{}.
-        
+
         ip_req      => $ip_validation_reqd  # Boolean value determining whether
                                             # this user requires IP whitelist
                                             # validation. ( 0 = no, 1 = yes ).
                                             # Optional field.  Default 1.
-                                            
+
         ips_aref    => [                    # Optional field.  Default is empty
             '127.0.0.1',                    # list.  If 'ip_req' is set and no
             '192.168.0.1',                  # list is provided here, then valid
         ],                                  # IP's will need to be added later
                                             # before user can validate.
     } );
-    
+
 This method creates a new user in the database with the C<userid> supplied when
 the user object was instantiated.  The password field is the only required
 field.  It must contain a clear-text passphrase.  There is no length limitation.
 
 Other fields are optional, but convenient.  If IP whitelisting is B<NOT> needed
-for this user, the C<ip_req> field must be supplied, and must be set to C<0> 
+for this user, the C<ip_req> field must be supplied, and must be set to C<0>
 (zero).
 
 If C<ip_req> is set to C<1> (true), a list of valid IP's may also be provided
 in an arrayref keyed off of C<ips_aref>.  As a convenience, the C<ips> key is
-synonymous with C<ips_aref>.  The IP's provided will then be added to the 
+synonymous with C<ips_aref>.  The IP's provided will then be added to the
 C<user_ips> database table.  If an IP is required but none are added via
 C<add_user>, they will have to be added manually with C<add_ips> before the
 user can be validated.
@@ -677,11 +625,11 @@ The user's passphrase will be salted with a cryptographically sound random
 salt of 512 bits (128 hex digits).  It will then be digested using a SHA2-512
 hash, and both the salt and the digest will be stored in the C<users> database.
 
-This is a reliable and secure means of storing a passphrase.  In fact, the 
-passphrase is not stored at all.  Just a salt and the digest.  Even if the 
+This is a reliable and secure means of storing a passphrase.  In fact, the
+passphrase is not stored at all.  Just a salt and the digest.  Even if the
 salt and hash were to be discovered by an attacker, they would not be useful
-in side-stepping user validation, as they cannot be used to decrypt the 
-passphrase.  SHA512 is the strongest of the SHA2 family.  A salt length of 
+in side-stepping user validation, as they cannot be used to decrypt the
+passphrase.  SHA512 is the strongest of the SHA2 family.  A salt length of
 512 bits guarantees a maximum entropy for any given passphrase.
 
 Though it is beyond the scope of this module to do so, users should be
@@ -703,11 +651,11 @@ which is the maximum length possible for a valid email address.
 
     # Update with validation of old password first.
     my $success = $user->update_password( $new_pass, $old_pass );
-    
+
     # Update without validation of old password first.
     my $success = $user->update_password( $new_pass );
 
-Using the same algorithms of C< add_user( { password => $passphrase } ); >>, 
+Using the same algorithms of C< add_user( { password => $passphrase } ); >>,
 creates a new password for the user.  If the old passphrase is supplied as
 a second parameter, the update will only take place if the old passphrase
 validates.
@@ -728,22 +676,22 @@ table's C<username> field accepts user names up to fourty characters.
 =head2 	userid
 
     my $userid = $user->userid;
-    
-A simple accessor returning the C<userid> that is the target of the 
+
+A simple accessor returning the C<userid> that is the target of the
 C<Class::User::DBI> object.
 
 =head2 	validate
 
     # If no IP whitelist verification is required:
     my $is_valid  = $user->validate( $passphrase );
-    
+
     # If IP whitelist verification is required:
     my $is_valid = $user->validate( $passphrase, $current_ip );
 
-Returns true if and only if the user can be validated.  What that means will 
+Returns true if and only if the user can be validated.  What that means will
 be described in the paragraphs below.  If the user cannot be validated, the
 return value will be C<undef>.  It doesn't matter what the reason for failure
-to authenticate might have been: Invalid user ID, invalid password, or 
+to authenticate might have been: Invalid user ID, invalid password, or
 invalid IP address; all three reasons result in a return value of C<undef>.
 This behavior encourages the best practice of not divulging to the user why
 his authentication failed.  The less information provided, the less an
@@ -753,7 +701,7 @@ attacker can user to narrow the field.
 
 If the user has been configured for no IP testing, validation means that the
 C<userid> exists (case insensitively) within the database, and that the
-passphrase passed to C<validate()>, when salted with the stored salt and 
+passphrase passed to C<validate()>, when salted with the stored salt and
 digested using a SHA2-512 hashing algorithm results in the same 512 bit hash
 as the one generated when the passphrase was originally set up.
 
@@ -766,25 +714,25 @@ that IP will be passed for cross-checking with the whitelist database.
 
 The C<validate()> method caches its B<positive> result.  Any action that might
 change the authentication status will remove the cached status.  Actions that
-will result in C<validate()> to perform all tests again include 
-C<delete_user()>, C<update_password()>, or C<validated(0)> (passing the 
+will result in C<validate()> to perform all tests again include
+C<delete_user()>, C<update_password()>, or C<validated(0)> (passing the
 C<validated()> method a '0'.
 
 =head2 	validated
 
     # Test.
     my $has_been_validated = $user->validated;
-    
+
     # Invalidate.
     $user->validated(0);
 
-Returns true if the user has been validated, as described above.  Does not 
-perform a full validation; simply tests whether the previous call to 
+Returns true if the user has been validated, as described above.  Does not
+perform a full validation; simply tests whether the previous call to
 C<validate()> succeeded, and that nothing has happened to remove that "is valid"
 status.
 
 Pass a parameter of 'C<0>' to force all future calls to C<validated()> to return
-false.  Also, after resetting C<validated()> to false, future calls to 
+false.  Also, after resetting C<validated()> to false, future calls to
 C<validate()> will go through the full authentication process again until such
 time as the authentication is successful.
 
@@ -834,12 +782,12 @@ Returns a true value if the user has the named role.  False otherwise.
 =head2 	add_roles
 
     my $quantity_added = $user->add_roles( @list_of_roles );
-    
+
 Pass a list of roles to add for the target user.  Roles already duplicated in
 the database will be silently skipped.  Returns a count of how many roles were
 added.
 
-=head2 	delete_role
+=head2 	delete_roles
 
     my $quantity_deleted = $user->delete_roles( @list_of_roles );
 
@@ -847,16 +795,42 @@ Pass a list of roles to delete for the target user.  Roles not found in the
 database will be silently skipped.  Returns a count of how many roles were
 actually deleted.
 
+
+=head2 	list_users
+(Class method)
+
+    my @users = Class::User::DBI->list_users( $connector );
+    foreach my $listed_user ( @users ) {
+        my( $userid, $username, $email ) = @{$listed_user};
+        print "userid: ($userid).  username: ($username).  email: ($email).\n";
+    }
+
+This is a class method.  Pass a valid DBIx::Connector as a parameter. Returns
+a list of arrayrefs.  Each anonymous array contains C<userid>, C<username>,
+and C<email>.
+
+
+=head2  configure_db
+(Class method)
+
+    Class::User::DBI->configure_db( $connector );
+
+This is a class method.  Pass a valid DBIx::Connector as a parameter.  Builds
+a minimal set of database tables in support of the Class::User::DBI.
+
+The tables created will be C<users>, C<user_ips>, and C<user_roles>.
+
+
 =head1 DEPENDENCIES
 
-This module requires DBIx::Connector, and Authen::Passphrase::SaltedSHA512.
-It also requires a database back-end.  The test suite will use DBD::SQLite,
-but it has also been tested with DBD::mysql.  None of these dependencies could
-be considered light-weight.  The dependency chain of this module is
-indicative of the difficulty in assuring cryptographically strong random
-salt generation, reliable SHA2-512 hashing of passphrases, fork-safe database
-connectivity, and transactional commits for inserts and updates spanning
-multiple tables.
+This module requires DBIx::Connector, Authen::Passphrase::SaltedSHA512, and
+List::MoreUtils. It also requires a database connection.  The test suite will
+use DBD::SQLite, but it has also been tested with DBD::mysql.  None of these
+dependencies with the exception of List::MoreUtils could be considered
+light-weight.  The dependency chain of this module is indicative of the
+difficulty in assuring cryptographically strong random salt generation,
+reliable SHA2-512 hashing of passphrases, fork-safe database connectivity, and
+transactional commits for inserts and updates spanning multiple tables.
 
 
 =head1 CONFIGURATION AND ENVIRONMENT
@@ -886,22 +860,49 @@ simplest form, a minimal recommendation would be:
                     role        VARCHAR(40) NOT NULL DEFAULT ''
     PRIMARY KEY:    userid, role
 
-For convenience, configuration scripts are provided that will auto-generate
+For convenience, a class method has been provided that will auto-generate
 the minimal schema within a SQLite or MySQL database.  The SQLite database is
 probably only useful for testing, as it lacks many of the security measures
-present in web-stack-quality databases.  The configuration scripts are found
-in the scripts/ directory within the distribution's build directory tree.
+present in web-stack quality databases.  A sample script that would generate
+a minimal database could be as simple as this:
 
-It may be advisable to enable UTF8 for the C<userid>, C<email>, C<username> 
+    use strict;
+    use warnings;
+    use DBIx::Connector;
+    use Class::User::DBI;
+
+    my( $dsn, $dbuser, $dbpass )
+        = (
+            'dbi:mysql:database=cudbi_tests,
+            'testing_user',
+            'testers_pass'
+        );
+
+    my $conn = DBIx::Connector->new(
+        $dsn,
+        $dbuser,
+        $dbpass,
+        {
+            AutoCommit  => 1,
+            RaiseError  => 1,
+        }
+    );
+
+    __END__
+
+
+After creating the database framework, it might be useful to alter the tables
+that have been generated by customizing field widths, text encoding, and so on.
+It may be advisable to enable UTF8 for the C<userid>, C<email>, C<username>
 fields, and  possibly even for the C<role> field.
 
-There is no explicit size requirement for the C<userid>, C<username>, and 
+There is no explicit size requirement for the C<userid>, C<username>, and
 C<role> fields.  They could be made wider if it's deemed useful.  Don't be
 tempted to reduce the size of the email address field: The best practice of
 coding to the standard dictates that the field needs to be 320 characters wide.
 
 The C<salt> and C<password> fields are used to store a 128 hex-digit
-representation of the 512 bit salt and 512 bit SHA2 hash of the user's 
+representation of the 512 bit salt and 512 bit SHA2 hash of the user's
 passphrase.  More digits is not useful, and less won't store the full salt
 and hash.
 
@@ -911,15 +912,19 @@ and hash.
 If you find that your particular database engine is not playing nicely with the
 SQL from this module, it could be helpful to modify the test script found in
 C<t/15-class_tests.t>, within the distribution's directory by providing the
-database login credentials for a test database using the same engine that your 
-application will actually be using.  
+database login credentials for a test database using the same engine that your
+application will actually be using.
 
-Currently the test suite tests against a SQLite database since it's such a 
-lightweight dependency for the test suite.  The author also uses this module
+Currently the test suite tests against a SQLite database since it's such a
+lightweight dependency for the testing.  The author also uses this module
 with several MySQL databases.  As you're configuring your database, providing
 its credentials to C<t/15-class_tests.t> and running the test script will
 offer really good diagnostics if some aspect of your database tables proves to
 be at odds with what this module needs.
+
+Be advised that the the test suite drops its tables after completion, so be sure
+to run C<t/15-class_tests.t> only on a database set up explicitly for testing
+purposes.
 
 =head1 INCOMPATIBILITIES
 
@@ -941,9 +946,11 @@ David Oswald, C<< <davido at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-class-user-dbi at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Class-User-DBI>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+Please report any bugs or feature requests to
+C<bug-class-user-dbi at rt.cpan.org>, or through the web interface at
+L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Class-User-DBI>.  I will be
+notified, and then you'll automatically be notified of progress on your bug as
+I make changes.
 
 
 

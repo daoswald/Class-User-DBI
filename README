@@ -23,7 +23,9 @@ functionality is presented.
 
 DEPENDENCIES
 
-This module requires DBIx::Connector, and Authen::Passphrase::SaltedSHA512.
+This module requires List::MoreUtils, DBIx::Connector, and 
+Authen::Passphrase::SaltedSHA512.
+
 It also requires a database back-end.  The test suite will use DBD::SQLite,
 but it has also been tested with DBD::mysql.  None of these dependencies could
 be considered light-weight.  The dependency chain of this module is
@@ -59,11 +61,8 @@ simplest form, a minimal recommendation would be:
                     role        VARCHAR(40) NOT NULL DEFAULT ''
     PRIMARY KEY:    userid, role
 
-For convenience, configuration scripts are provided that will auto-generate
-the minimal schema within a SQLite or MySQL database.  The SQLite database is
-probably only useful for testing, as it lacks many of the security measures
-present in web-stack-quality databases.  The configuration scripts are found
-in the scripts/ directory within the distribution's build directory tree.
+Please read the module's POD for a more thorough explanation and tips on 
+configuring the database.
 
 INSTALLATION
 
