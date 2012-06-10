@@ -597,7 +597,7 @@ until such time that the result flips to positive again.
         ip_req      => $ip_validation_reqd  # Boolean value determining whether
                                             # this user requires IP whitelist
                                             # validation. ( 0 = no, 1 = yes ).
-                                            # Optional field.  Default 1.
+                                            # Optional field.  Default 0.
 
         ips_aref    => [                    # Optional field.  Default is empty
             '127.0.0.1',                    # list.  If 'ip_req' is set and no
@@ -610,9 +610,9 @@ This method creates a new user in the database with the C<userid> supplied when
 the user object was instantiated.  The password field is the only required
 field.  It must contain a clear-text passphrase.  There is no length limitation.
 
-Other fields are optional, but convenient.  If IP whitelisting is B<NOT> needed
-for this user, the C<ip_req> field must be supplied, and must be set to C<0>
-(zero).
+Other fields are optional, but convenient.  If IP whitelisting is needed
+for this user, the C<ip_req> field must be supplied, and must be set to C<1>
+(true).
 
 If C<ip_req> is set to C<1> (true), a list of valid IP's may also be provided
 in an arrayref keyed off of C<ips_aref>.  As a convenience, the C<ips> key is
