@@ -14,7 +14,7 @@ use Authen::Passphrase::SaltedSHA512;
 
 use Class::User::DBI::DB qw( %QUERY );
 
-our $VERSION = '0.01_001';
+our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -493,7 +493,7 @@ described in the next section.
 =head1 SUBROUTINES/METHODS
 
 
-=head2 	new
+=head2  new
 (The constructor -- Class method.)
 
     my $user_obj = Class::User::DBI->new( $connector, $userid );
@@ -505,7 +505,7 @@ The user object may be accessed and manipulated through the methods listed
 below.
 
 
-=head2 	fetch_credentials
+=head2  fetch_credentials
 
     my $credentials_href = $user->fetch_credentials;
     my @fields = qw( userid salt_hex pass_hex ip_required );
@@ -545,7 +545,7 @@ C<< $user->validate( $passphrase, $ip ) >> method is easier to use and less
 prone to error.  But for those cases I haven't considered, the
 C<fetch_credentials()> method exists.
 
-=head2 	load_profile
+=head2  load_profile
 
     my $user_info_href = $user->load_profile;
     foreach my $field ( qw/ userid username email / ) {
@@ -566,7 +566,7 @@ module could be subclassed to process those fields, it's probably easier to
 just add another table keyed off of the unique C<userid> field, containing
 any additional information a given application requires for a user.
 
-=head2 	delete_user
+=head2  delete_user
 
     $user->delete_user;
 
@@ -575,7 +575,7 @@ roles.  Also sets the C<< $user->validated >>, and C<< $user->exists_user >>
 flags to false.
 
 
-=head2 	exists_user
+=head2  exists_user
 
 Checks the database to verify that the user exists.  As this method is used
 internally frequently its B<positive> result is cached to minimize database
@@ -584,7 +584,7 @@ database, such as C<< $user->delete_user >> will remove the cache entry, and
 subsequent tests will access the database on each call to C<exists_user()>,
 until such time that the result flips to positive again.
 
-=head2 	add_user
+=head2  add_user
 
     my $success = $self->add_user( {
         username    => $user_full_name,     # Optional field. Default q{}.
@@ -638,7 +638,7 @@ dissimilar to passphrases used in other applications.  No minimum passphrase
 size is enforced by this module.  But a strong passphrase should be of ample
 length, and should contain characters beyond the standard alphabet.
 
-=head2 	update_email
+=head2  update_email
 
     my $success = $user->update_email( $new_email_address )
 
@@ -647,7 +647,7 @@ database field used for storing email addresses provides 320 bytes of storage,
 which is the maximum length possible for a valid email address.
 
 
-=head2 	update_password
+=head2  update_password
 
     # Update with validation of old password first.
     my $success = $user->update_password( $new_pass, $old_pass );
@@ -665,7 +665,7 @@ password.  The "without validation" version is useful for allowing an
 administrator (or automated process) to reset a user's forgotten password.
 
 
-=head2 	update_username
+=head2  update_username
 
     my $success = $user->update_username( $new_user_full_name );
 
@@ -673,14 +673,14 @@ There's probably not much need for explaining this method.  The default database
 table's C<username> field accepts user names up to fourty characters.
 
 
-=head2 	userid
+=head2  userid
 
     my $userid = $user->userid;
 
 A simple accessor returning the C<userid> that is the target of the
 C<Class::User::DBI> object.
 
-=head2 	validate
+=head2  validate
 
     # If no IP whitelist verification is required:
     my $is_valid  = $user->validate( $passphrase );
@@ -718,7 +718,7 @@ will result in C<validate()> to perform all tests again include
 C<delete_user()>, C<update_password()>, or C<validated(0)> (passing the
 C<validated()> method a '0'.
 
-=head2 	validated
+=head2  validated
 
     # Test.
     my $has_been_validated = $user->validated;
@@ -737,7 +737,7 @@ C<validate()> will go through the full authentication process again until such
 time as the authentication is successful.
 
 
-=head2 	fetch_valid_ips
+=head2  fetch_valid_ips
 
     my @valid_ips = $user->fetch_valid_ips;
 
@@ -747,7 +747,7 @@ IP validation, or there are no IP's stored for this user, the list will be
 empty.
 
 
-=head2 	add_ips
+=head2  add_ips
 
     my $quantity_added = $user->add_ips ( @whitelisted_ips );
 
@@ -756,7 +756,7 @@ are already in the database will be silently skipped.
 
 Returns a count of how many were added.
 
-=head2 	delete_ips
+=head2  delete_ips
 
     my $quantity_deleted = $user->delete_ips( @ips_to_remove );
 
@@ -766,20 +766,20 @@ that weren't found in the database will be silently skipped.
 Returns a count of how many IP's were dropped.
 
 
-=head2 	fetch_roles
+=head2  fetch_roles
 
     my @roles = $user->fetch_roles;
 
 Returns a list of roles this user has.  Roles are simply strings that may be
 used to identify a resource a user is authorized to access.
 
-=head2 	can_role
+=head2  can_role
 
     my $can_access  = $user->can_role( $role_name );
 
 Returns a true value if the user has the named role.  False otherwise.
 
-=head2 	add_roles
+=head2  add_roles
 
     my $quantity_added = $user->add_roles( @list_of_roles );
 
@@ -787,7 +787,7 @@ Pass a list of roles to add for the target user.  Roles already duplicated in
 the database will be silently skipped.  Returns a count of how many roles were
 added.
 
-=head2 	delete_roles
+=head2  delete_roles
 
     my $quantity_deleted = $user->delete_roles( @list_of_roles );
 
@@ -796,7 +796,7 @@ database will be silently skipped.  Returns a count of how many roles were
 actually deleted.
 
 
-=head2 	list_users
+=head2  list_users
 (Class method)
 
     my @users = Class::User::DBI->list_users( $connector );
@@ -886,10 +886,19 @@ a minimal database could be as simple as this:
             AutoCommit  => 1,
             RaiseError  => 1,
         }
+
     );
+
+    Class::User::DBI->configure_db( $conn )
 
     __END__
 
+Within the C<scripts/> directory of this distribution you will find a script
+that accepts a database type (mysql or sqlite), database name, database
+username, and database password on the command line.  It then opens the given
+database and creates the appropriate tables using a variation on the snippet
+shown above.  The script is named C<cudbi-configdb>.  Run it once without
+any command line parameters to see details on usage.
 
 After creating the database framework, it might be useful to alter the tables
 that have been generated by customizing field widths, text encoding, and so on.

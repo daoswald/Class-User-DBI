@@ -1,8 +1,14 @@
 Revision history for Class-User-DBI
 
-0.01_001    Thu Jun 9, 2012 21:06:00PM
-    First version.
-    Beta quality.
+0.01_002    Mon Jun 11, 2012 14:11:00
+    - Corrected some example code in the POD.
+    - Added cudbi-configdb script to scripts/ for automatic database setup.
+    - Added a note to the POD about cudbi-configdb.
+    - Still beta quality.
+
+0.01_001    Thu Jun 9, 2012 21:06:00
+    - First version.
+    - Beta quality.
 
 
 

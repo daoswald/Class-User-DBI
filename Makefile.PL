@@ -11,6 +11,7 @@ WriteMakefile(
     LICENSE            => 'perl',
     MIN_PERL_VERSION   => '5.008000',
     PL_FILES           => {},
+    EXE_FILES          => ['scripts/cudbi-configdb'],
     CONFIGURE_REQUIRES => { 'ExtUtils::MakeMaker' => '6.62', },
     BUILD_REQUIRES     => {
         'Test::More'  => '0.98',

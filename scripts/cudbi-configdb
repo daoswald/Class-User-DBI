@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+
+
+# cudbi-configdb v0.01_002.
+# generate Class::User::DBI tables in database.
+# Warning: This will drop the following tables before creating them: 
+# users, user_ips, and user_roles.
+
+use strict;
+use warnings;
+
+use DBIx::Connector;
+
+use Class::User::DBI;
+
+die( usage('Too few params.') ) if @ARGV < 2;
+
+my ( $dbtype, $dbname, $dbuser, $dbpass ) = @ARGV;
+
+$dbtype =~ s/sqlite/SQLite/i;    # SQLite likes CAMel casing.
+$dbtype =~ s/mysql/mysql/i;      # MySQL wants lower case.
+
+my $dsn = "dbi:$dbtype:database=$dbname";
+
+eval {
+    my $conn = DBIx::Connector->new(
+        $dsn,
+        defined $dbuser ? $dbuser : (),
+        defined $dbpass ? $dbpass : (),
+        {
+            AutoCommit => 1,
+            RaiseError => 1,
+        }
+    );
+    Class::User::DBI->configure_db($conn);
+};
+
+if ($@) {
+    usage("Database tables weren't created: $@");
+}
+
+sub usage {
+    my $message = shift;
+    die <<"HERE";
+$message
+Usage: cudbi-configdb 'dbtype' 'dbname' [ 'dbuser' ['dbpass'] ]
+
+dbtype is known to support 'mysql' and for 'SQLite'.
+dbname must be a valid database.
+dbuser must be a user id for the database that has CREATE TABLE priviledges.
+dbpass must be the password dbuser uses to log into the database.
+HERE
+
+}
+

@@ -9,7 +9,7 @@ use Exporter;
 our @ISA       = qw ( Exporter );    ## no critic (ISA)
 our @EXPORT_OK = qw( %QUERY );
 
-our $VERSION = '0.01_001';
+our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;            ## no critic (eval)
 
 # SQL queries used throughout Class::User::DBI.

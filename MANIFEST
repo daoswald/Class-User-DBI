@@ -14,5 +14,6 @@ t/05-kwalitee.t
 t/10-prereqs.t
 t/11-load.t
 t/15-class_tests.t
+scripts/cudbi-configdb
 META.json
 META.yml
