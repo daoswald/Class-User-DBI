@@ -14,8 +14,11 @@ WriteMakefile(
     EXE_FILES          => ['scripts/cudbi-configdb'],
     CONFIGURE_REQUIRES => { 'ExtUtils::MakeMaker' => '6.62', },
     BUILD_REQUIRES     => {
-        'Test::More'  => '0.98',
-        'DBD::SQLite' => 0,
+        'Test::More'      => '0.98',
+        'Test::Exception' => 0,
+        'List::MoreUtils' => 0,
+        'DBIx::Connector' => 0,
+        'DBD::SQLite'     => 0,
     },
     PREREQ_PM => {
         'Test::More'                       => 0,
@@ -24,7 +27,24 @@ WriteMakefile(
         'List::MoreUtils'                  => 0,
     },
     META_MERGE => {
-        provides  => 'Class::User::DBI.pm',
+        provides => {
+            'Class::User::DBI' => {
+                file    => 'lib/Class/User/DBI.pm',
+                version => '0.01_002',
+            },
+            'Class::User::DBI::DB' => {
+                file    => 'lib/Class/User/DBI/DB.pm',
+                version => '0.01_002',
+            },
+            'Class::User::DBI::Privileges' => {
+                file    => 'lib/Class/User/DBI/Privileges.pm',
+                version => '0.01_002',
+            },
+            'Class::User::DBI::Domains' => {
+                file    => 'lib/Class/User/DBI/Domains.pm',
+                version => '0.01_002',
+            },
+        },
         version   => '0.02',
         resources => {
             repository => {

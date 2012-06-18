@@ -1,6 +1,8 @@
 Changes
 lib/Class/User/DBI.pm
 lib/Class/User/DBI/DB.pm
+lib/Class/User/DBI/Privileges.pm
+lib/Class/User/DBI/Domains.pm
 Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
@@ -14,6 +16,9 @@ t/05-kwalitee.t
 t/10-prereqs.t
 t/11-load.t
 t/15-class_tests.t
+t/16-cudbi_privileges.t
+t/17-cudbi_db.t
+t/18-cudbi_domains.t
 scripts/cudbi-configdb
 META.json
 META.yml

@@ -7,8 +7,6 @@ use Test::Exception;
 
 use List::MoreUtils qw( any );
 
-use Data::Dumper;
-
 BEGIN {
     use_ok('Class::User::DBI::Privileges');
 }
@@ -171,40 +169,55 @@ subtest 'Test delete_privileges()' => sub {
     done_testing();
 };
 
-subtest 'Test fetch_privileges().'  => sub {
-    $p->add_privileges( 
-        [ 'tupitar2', 'He can tupitar again.' ], 
+subtest 'Test fetch_privileges().' => sub {
+    $p->add_privileges(
+        [ 'tupitar2', 'He can tupitar again.' ],
         [ 'tupitar5', 'He can do a lot of tupitaring.' ],
     );
     my @privs = $p->fetch_privileges;
 
-    is( scalar @privs, 3, 
-        'fetch_privileges fetches correct number of privileges.' 
+    is( scalar @privs,
+        3, 'fetch_privileges fetches correct number of privileges.' );
+    is( ref $privs[0],
+        'ARRAY', 'fetch_privileges(): Return value is an AoA\'s.' );
+    ok(
+        ( any { $_->[0] eq 'tupitar2' } @privs ),
+        'fetch_privileges(): Found a correct privilege.'
     );
-    is( ref $privs[0], 'ARRAY', 
-        'fetch_privileges(): Return value is an AoA\'s.' 
-    );
-    ok( ( any { $_->[0] eq 'tupitar2' } @privs ), 
-        'fetch_privileges(): Found a correct privilege.' 
-    );
-    ok( ( any { $_->[1] =~ /again/    } @privs ), 
-        'fetch_privileges(): Descriptions load correctly.' 
-    );
-    
+    ok( ( any { $_->[1] =~ /again/ } @privs ),
+        'fetch_privileges(): Descriptions load correctly.' );
+
     done_testing();
 };
 
 subtest 'Test get_privilege_description().' => sub {
-    dies_ok { $p->get_privilege_description( 'gnarfle' ) }
-            'get_privilege_description(): Throws an exception for ' .
-            'non-existent privilege.';
+    dies_ok { $p->get_privilege_description('gnarfle') }
+    'get_privilege_description(): Throws an exception for '
+      . 'non-existent privilege.';
     dies_ok { $p->get_privilege_description() }
-            'get_privilege_description(): Throws an exception ' .
-            'when missing param.';
-    like( $p->get_privilege_description( 'tupitar2' ), qr/tupitar again/,
-          'get_privilege_description(): Returns the description ' .
-          'of a valid privilege.'
+    'get_privilege_description(): Throws an exception ' . 'when missing param.';
+    like(
+        $p->get_privilege_description('tupitar2'),
+        qr/tupitar again/,
+        'get_privilege_description(): Returns the description '
+          . 'of a valid privilege.'
     );
+    done_testing();
+};
+
+subtest 'Test update_privilege_description()' => sub {
+    dies_ok { $p->update_privilege_description() }
+    'update_privilege_description(): Dies if no privilege specified.';
+    dies_ok { $p->update_privilege_description('gnarfle') }
+    'update_privilege_description(): Dies if privilege doesn\t exist.';
+    dies_ok { $p->update_privilege_description('tupitar2') }
+    'update_privilege_description(): Dies if no description specified.';
+    ok(
+        $p->update_privilege_description( 'tupitar2', 'Not gnarfling.' ),
+        'update_privilege_description(): Got a good return value'
+    );
+    like( $p->get_privilege_description('tupitar2'),
+        qr/gnarfling/, 'update_privilege_description(): Description updated.' );
     done_testing();
 };
 

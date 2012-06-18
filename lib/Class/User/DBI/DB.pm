@@ -6,17 +6,17 @@ use warnings;
 use 5.008;
 
 use Exporter;
-our @ISA       = qw( Exporter );    ## no critic (ISA)
-our @EXPORT    = qw( _db_run_ex );
-our @EXPORT_OK = qw(  %USER_QUERY  %PRIV_QUERY  _db_run_ex );
+our @ISA    = qw( Exporter );     ## no critic (ISA)
+our @EXPORT = qw( _db_run_ex );
+our @EXPORT_OK = qw(  %USER_QUERY  %PRIV_QUERY  %DOM_QUERY _db_run_ex );
 
 use Carp;
 
-
 our $VERSION = '0.01_003';
-$VERSION = eval $VERSION;            ## no critic (eval)
+$VERSION = eval $VERSION;         ## no critic (eval)
 
-# SQL queries used throughout Class::User::DBI.
+# ---------------- SQL queries for Class::User::DBI --------------------------
+
 our %USER_QUERY = (
     SQL_fetch_valid_ips => 'SELECT ip FROM user_ips WHERE userid = ?',
     SQL_fetch_credentials =>
@@ -68,39 +68,50 @@ END_SQL
 END_SQL
 );
 
-
-
-
-
-
-
-
-
-#=========================================================
-
+#------------ Queries for Class::User::DBI::Privileges -----------------------
 
 our %PRIV_QUERY = (
-    SQL_configure_db_cud_privileges    => << 'END_SQL',
+    SQL_configure_db_cud_privileges => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS cud_privileges (
         privilege   VARCHAR(24)           NOT NULL,
         description VARCHAR(40)           NOT NULL DEFAULT '',
         PRIMARY KEY (privilege)
     )
 END_SQL
-    SQL_exists_privilege  =>
-        'SELECT privilege FROM cud_privileges WHERE privilege = ?',
-    SQL_add_privileges    =>
-        'INSERT INTO cud_privileges ( privilege, description ) VALUES ( ?, ? )',
-    SQL_delete_privileges =>
-        'DELETE FROM cud_privileges WHERE privilege = ?',
-    SQL_get_privilege_description   =>
-        'SELECT description FROM cud_privileges WHERE privilege = ?',
-    SQL_update_privilege_description    =>
-        'UPDATE cud_privileges SET description = ? WHERE privilege = ?',
-    SQL_list_privileges =>
-        'SELECT * FROM cud_privileges',
+    SQL_exists_privilege =>
+      'SELECT privilege FROM cud_privileges WHERE privilege = ?',
+    SQL_add_privileges =>
+      'INSERT INTO cud_privileges ( privilege, description ) VALUES ( ?, ? )',
+    SQL_delete_privileges => 'DELETE FROM cud_privileges WHERE privilege = ?',
+    SQL_get_privilege_description =>
+      'SELECT description FROM cud_privileges WHERE privilege = ?',
+    SQL_update_privilege_description =>
+      'UPDATE cud_privileges SET description = ? WHERE privilege = ?',
+    SQL_list_privileges => 'SELECT * FROM cud_privileges',
 );
 
+#----------------- Queries for Class::User::DBI::Domains ---------------------
+
+our %DOM_QUERY = (
+    SQL_configure_db_cud_domains => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS cud_domains (
+        domain      VARCHAR(24)           NOT NULL,
+        description VARCHAR(40)           NOT NULL DEFAULT '',
+        PRIMARY KEY (domain)
+    )
+END_SQL
+    SQL_exists_domain => 'SELECT domain FROM cud_domains WHERE domain = ?',
+    SQL_add_domains =>
+      'INSERT INTO cud_domains ( domain, description ) VALUES ( ?, ? )',
+    SQL_delete_domains => 'DELETE FROM cud_domains WHERE domain = ?',
+    SQL_get_domain_description =>
+      'SELECT description FROM cud_domains WHERE domain = ?',
+    SQL_update_domain_description =>
+      'UPDATE cud_domains SET description = ? WHERE domain = ?',
+    SQL_list_domains => 'SELECT * FROM cud_domains',
+);
+
+# ------------------------------ Functions -----------------------------------
 
 # Prepares and executes a database command using DBIx::Connector's 'run'
 # method.  Pass bind values as 2nd+ parameter(s).  If the first bind-value
@@ -114,9 +125,9 @@ END_SQL
 
 sub _db_run_ex {
     my ( $conn, $sql, @ex_params ) = @_;
-    carp ref( $conn ) . ' is not a DBIx::Connector.' 
-        if ! $conn->isa('DBIx::Connector');
-    my $sth  = $conn->run(
+    croak ref($conn) . ' is not a DBIx::Connector.'
+      if !$conn->isa('DBIx::Connector');
+    my $sth = $conn->run(
         fixup => sub {
             my $sub_sth = $_->prepare($sql);
 
@@ -135,8 +146,9 @@ sub _db_run_ex {
     return $sth;
 }
 
-
 1;
+
+__END__
 
 =head1 SQL and other database-related data.
 =cut
