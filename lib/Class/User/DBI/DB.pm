@@ -6,10 +6,11 @@ use warnings;
 use 5.008;
 
 use Exporter;
-our @ISA       = qw ( Exporter );    ## no critic (ISA)
-our @EXPORT_OK = qw( %QUERY );
+our @ISA       = qw( Exporter );    ## no critic (ISA)
+our @EXPORT    = qw( _db_run_ex );
+our @EXPORT_OK = qw( %QUERY %PRIV_QUERY _db_run_ex );
 
-our $VERSION = '0.01_002';
+our $VERSION = '0.01_003';
 $VERSION = eval $VERSION;            ## no critic (eval)
 
 # SQL queries used throughout Class::User::DBI.
@@ -61,8 +62,57 @@ END_SQL
         PRIMARY KEY ( userid, role )
     )
 END_SQL
-
 );
+
+our %PRIV_QUERY = (
+    SQL_configure_db_cud_privileges    => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS cud_privileges (
+        privilege   VARCHAR(24)           NOT NULL,
+        description VARCHAR(40)           NOT NULL DEFAULT '',
+        PRIMARY KEY (privilege)
+    )
+END_SQL
+    SQL_exists_privilege  =>
+        'SELECT privilege FROM cud_privileges WHERE privilege = ?',
+    SQL_add_privileges    =>
+        'INSERT INTO cud_privileges ( privilege, description ) VALUES ( ?, ? )',
+    SQL_delete_privileges =>
+        'DELETE FROM cud_privileges WHERE privilege = ?',
+        
+);
+
+
+# Prepares and executes a database command using DBIx::Connector's 'run'
+# method.  Pass bind values as 2nd+ parameter(s).  If the first bind-value
+# element is an array ref, bind value params will be executed in a loop,
+# dereferencing each element's list upon execution:
+# $self->_db_run_ex( 'SQL GOES HERE', @execute_params ); .... OR....
+# $self->_db_run_ex(
+#     'SQL GOES HERE',
+#     [ first param list ], [ second param list ], ...
+# );
+
+sub _db_run_ex {
+    my ( $conn, $sql, @ex_params ) = @_;
+    my $sth  = $conn->run(
+        fixup => sub {
+            my $sub_sth = $_->prepare($sql);
+
+            # Pass an array of arrayrefs if execute() is to be called in a loop.
+            if ( @ex_params && ref( $ex_params[0] ) eq 'ARRAY' ) {
+                foreach my $param (@ex_params) {
+                    $sub_sth->execute( @{$param} );
+                }
+            }
+            else {
+                $sub_sth->execute(@ex_params);
+            }
+            return $sub_sth;
+        }
+    );
+    return $sth;
+}
+
 
 1;
 
