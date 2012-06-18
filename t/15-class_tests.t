@@ -12,7 +12,7 @@ use DBIx::Connector;
 # WARNING:  Tables will be dropped before and after running these tests.
 #           Only run the tests against a test database containing no data
 #           of value.
-#           Tables 'users', 'user_ips', and 'user_roles' WILL be dropped.
+#           Tables 'users', 'user_ips'.
 # YOU HAVE BEEN WARNED.
 
 # SQLite database settings.
@@ -47,9 +47,8 @@ subtest 'Class::User::DBI use and can tests.' => sub {
           new             add_user        userid          validated
           validate        load_profile    fetch_valid_ips exists_user
           delete_user     delete_ips      add_ips         update_email
-          update_username update_password list_users      fetch_roles
-          add_roles       delete_roles    can_role        configure_db
-          _db_conn        _db_run_ex
+          update_username update_password list_users      configure_db
+          _db_conn        _db_run
           )
     );
     done_testing();
@@ -71,11 +70,6 @@ $conn->run(
     }
 );
 
-$conn->run(
-    fixup => sub {
-        $_->do('DROP TABLE IF EXISTS user_roles');
-    }
-);
 
 Class::User::DBI->configure_db($conn);
 
@@ -100,8 +94,8 @@ subtest "Tests for $appuser" => sub {
         'validated():    Returns false if user has not been validated yet.' );
     isa_ok( $user->_db_conn, 'DBIx::Connector', '_db_conn():     ' );
 
-    my $query_handle = $user->_db_run_ex( 'SELECT * FROM users', () );
-    isa_ok( $query_handle, 'DBI::st', '_db_run_ex():  ' );
+    my $query_handle = $user->_db_run( 'SELECT * FROM users', () );
+    isa_ok( $query_handle, 'DBI::st', '_db_run():  ' );
 
     my $rv = $user->fetch_credentials();
 
@@ -305,44 +299,6 @@ subtest 'list_users() tests.' => sub {
     is( scalar( grep { $_->[0] eq $appuser } @users ),
         1, 'Found our test user.' );
     is( scalar @users > 1, 1, 'Found more than one user.' );
-    done_testing();
-};
-
-subtest 'Roles tests.' => sub {
-    my $user = Class::User::DBI->new( $conn, $appuser );
-    if ( !$user->can_role('tupitar') ) {
-        $user->add_roles('tupitar');
-    }
-    my @roles = $user->fetch_roles;
-    ok(
-        grep( { $_ eq 'tupitar' } @roles ),
-        'fetch_roles() found role tupitar.'
-    );
-    ok( $user->can_role('tupitar'), 'can_role(): Test user can tupitar.' );
-    ok( !$user->can_role('frobcinate'),
-        'can_role(): Test user can not frobcinate (yet).' );
-    is( $user->add_roles('frobcinate'),
-        1, 'add_roles(): Added frobcinate role.' );
-    ok( $user->can_role('frobcinate'),
-        'can_role(): Test user can now frobcinate.' );
-    ok(
-        $user->delete_roles('frobcinate'),
-        'delete_roles(): Deleted frobcinate role.'
-    );
-    ok( !$user->can_role('frobcinate'),
-        'can_role(): Test user can no longer frobcinate.' );
-    my $user2 = Class::User::DBI->new( $conn, 'roles_user' );
-    $user2->add_user(
-        {
-            password => 'something',
-            username => 'somebody',
-            email    => 'this@that.com'
-        }
-    );
-    $user2->add_roles('frobcinate');
-    $user2->delete_user;
-    ok( !$user2->can_role('frobcinate'),
-        'delete_user: Deleted user can no longer frobcinate.' );
     done_testing();
 };
 

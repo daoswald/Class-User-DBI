@@ -8,13 +8,16 @@ use 5.008;
 use Exporter;
 our @ISA       = qw( Exporter );    ## no critic (ISA)
 our @EXPORT    = qw( _db_run_ex );
-our @EXPORT_OK = qw( %QUERY %PRIV_QUERY _db_run_ex );
+our @EXPORT_OK = qw(  %USER_QUERY  %PRIV_QUERY  _db_run_ex );
+
+use Carp;
+
 
 our $VERSION = '0.01_003';
 $VERSION = eval $VERSION;            ## no critic (eval)
 
 # SQL queries used throughout Class::User::DBI.
-our %QUERY = (
+our %USER_QUERY = (
     SQL_fetch_valid_ips => 'SELECT ip FROM user_ips WHERE userid = ?',
     SQL_fetch_credentials =>
       'SELECT salt, password, ip_required FROM users WHERE userid = ?',
@@ -45,6 +48,7 @@ our %QUERY = (
         ip_required TINYINT(1)            NOT NULL DEFAULT '1',
         username    VARCHAR(40)           DEFAULT NULL,
         email       VARCHAR(320)          DEFAULT NULL,
+        role        varchar(24)           DEFAULT NULL,
         PRIMARY KEY( userid )
     )
 END_SQL
@@ -64,6 +68,17 @@ END_SQL
 END_SQL
 );
 
+
+
+
+
+
+
+
+
+#=========================================================
+
+
 our %PRIV_QUERY = (
     SQL_configure_db_cud_privileges    => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS cud_privileges (
@@ -78,7 +93,12 @@ END_SQL
         'INSERT INTO cud_privileges ( privilege, description ) VALUES ( ?, ? )',
     SQL_delete_privileges =>
         'DELETE FROM cud_privileges WHERE privilege = ?',
-        
+    SQL_get_privilege_description   =>
+        'SELECT description FROM cud_privileges WHERE privilege = ?',
+    SQL_update_privilege_description    =>
+        'UPDATE cud_privileges SET description = ? WHERE privilege = ?',
+    SQL_list_privileges =>
+        'SELECT * FROM cud_privileges',
 );
 
 
@@ -94,6 +114,8 @@ END_SQL
 
 sub _db_run_ex {
     my ( $conn, $sql, @ex_params ) = @_;
+    carp ref( $conn ) . ' is not a DBIx::Connector.' 
+        if ! $conn->isa('DBIx::Connector');
     my $sth  = $conn->run(
         fixup => sub {
             my $sub_sth = $_->prepare($sql);

@@ -12,7 +12,7 @@ use List::MoreUtils qw( any );
 
 use Authen::Passphrase::SaltedSHA512;
 
-use Class::User::DBI::DB qw( %QUERY );
+use Class::User::DBI::DB qw( %USER_QUERY _db_run_ex );
 
 our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;    ## no critic (eval)
@@ -45,7 +45,7 @@ sub _db_conn {
 sub update_email {
     my ( $self, $new_email ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_update_email},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_update_email},
         $new_email, $self->userid );
     return $new_email;
 }
@@ -54,7 +54,7 @@ sub update_username {
     my ( $self, $new_username ) = @_;
     return if !$self->exists_user;
     my $sth =
-      $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_update_username},
+      $self->_db_run( $USER_QUERY{SQL_update_username},
         $new_username, $self->userid );
     return $new_username;
 }
@@ -73,39 +73,24 @@ sub validated {
 # method.  Pass bind values as 2nd+ parameter(s).  If the first bind-value
 # element is an array ref, bind value params will be executed in a loop,
 # dereferencing each element's list upon execution:
-# $self->_db_run_ex( 'SQL GOES HERE', @execute_params ); .... OR....
-# $self->_db_run_ex(
+# $self->_db_run( 'SQL GOES HERE', @execute_params ); .... OR....
+# $self->_db_run(
 #     'SQL GOES HERE',
 #     [ first param list ], [ second param list ], ...
 # );
 
-sub _db_run_ex {
+sub _db_run {
     my ( $self, $sql, @ex_params ) = @_;
     my $conn = $self->_db_conn;
-    my $sth  = $conn->run(
-        fixup => sub {
-            my $sub_sth = $_->prepare($sql);
-
-            # Pass an array of arrayrefs if execute() is to be called in a loop.
-            if ( @ex_params && ref( $ex_params[0] ) eq 'ARRAY' ) {
-                foreach my $param (@ex_params) {
-                    $sub_sth->execute( @{$param} );
-                }
-            }
-            else {
-                $sub_sth->execute(@ex_params);
-            }
-            return $sub_sth;
-        }
-    );
-    return $sth;
+    # We import _db_run_ex() from Class::User::DBI::DB.
+    return _db_run_ex( $conn, $sql, @ex_params );
 }
 
 # Fetches all IP's that are whitelisted for the user.
 sub fetch_valid_ips {
     my $self = shift;
     my $sth =
-      $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_fetch_valid_ips},
+      $self->_db_run( $USER_QUERY{SQL_fetch_valid_ips},
         $self->userid );
     my @rv;
     while ( defined( my $row = $sth->fetchrow_arrayref ) ) {
@@ -120,7 +105,7 @@ sub fetch_valid_ips {
 sub fetch_credentials {
     my $self = shift;
     my $sth =
-      $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_fetch_credentials},
+      $self->_db_run( $USER_QUERY{SQL_fetch_credentials},
         $self->userid );
     my ( $salt_hex, $pass_hex, $ip_required ) = $sth->fetchrow_array;
     return if not defined $salt_hex;    # User wasn't found.
@@ -168,7 +153,7 @@ sub exists_user {
     my $self = shift;
     return $self->{exists_user}
       if $self->{exists_user};    # Only query if we have to.
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_exists_user},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_exists_user},
         $self->userid );
     return $sth->fetchrow_array;    # Will be undef if user doesn't exist.
 }
@@ -176,7 +161,7 @@ sub exists_user {
 # May be useful later on if we add user information.
 sub load_profile {
     my $self = shift;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_load_profile},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_load_profile},
         $self->userid );
     my $hr = $sth->fetchrow_hashref;
     return $hr;
@@ -196,7 +181,7 @@ sub add_ips {
     # Prepare the userid,ip bundles for our insert query.
     my @execution_param_bundles =
       map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_to_insert;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_add_ips},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_add_ips},
         @execution_param_bundles );
 
     return scalar @ips_to_insert;    # Return a count of IP's inserted.
@@ -211,7 +196,7 @@ sub delete_ips {
     my @ips_for_deletion = grep { exists $found{$_} } @ips;
     my @execution_param_bundles =
       map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_for_deletion;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_ips},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_delete_ips},
         @execution_param_bundles );
     return scalar @ips_for_deletion;    # Return a count of IP's deleted.
 }
@@ -241,7 +226,7 @@ sub add_user {
     my $hash_hex = $passgen->hash_hex;
     $self->_db_conn->txn(
         fixup => sub {
-            my $sth = $_->prepare( $Class::User::DBI::DB::QUERY{SQL_add_user} );
+            my $sth = $_->prepare( $USER_QUERY{SQL_add_user} );
             $sth->execute( $self->userid, $salt_hex, $hash_hex, $ip_req,
                 $username, $email );
             if ( ref($ips_aref) eq 'ARRAY' ) {
@@ -277,7 +262,7 @@ sub update_password {
     $self->_db_conn->txn(
         fixup => sub {
             my $sth =
-              $_->prepare( $Class::User::DBI::DB::QUERY{SQL_update_password} );
+              $_->prepare( $USER_QUERY{SQL_update_password} );
             $sth->execute( $salt_hex, $hash_hex, $self->userid );
         }
     );
@@ -291,15 +276,11 @@ sub delete_user {
         fixup => sub {
             my $sth =
               $_->prepare(
-                $Class::User::DBI::DB::QUERY{SQL_delete_user_users} );
+                $USER_QUERY{SQL_delete_user_users} );
             $sth->execute( $self->userid );
             my $sth2 =
-              $_->prepare( $Class::User::DBI::DB::QUERY{SQL_delete_user_ips} );
+              $_->prepare( $USER_QUERY{SQL_delete_user_ips} );
             $sth2->execute( $self->userid );
-            my $sth3 =
-              $_->prepare(
-                $Class::User::DBI::DB::QUERY{SQL_delete_user_roles} );
-            $sth3->execute( $self->userid );
         }
     );
     $self->validated(0);    # Invalidate the deleted user, just in case it was
@@ -308,10 +289,12 @@ sub delete_user {
     return 1;
 }
 
+
+=cut
 sub fetch_roles {
     my $self = shift;
     return if !$self->exists_user;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_fetch_roles},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_fetch_roles},
         $self->userid );
     my $roles_aoa = $sth->fetchall_arrayref;
     my @roles = map { $_->[0] } @{$roles_aoa};
@@ -321,7 +304,7 @@ sub fetch_roles {
 sub can_role {
     my ( $self, $role ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_can_role},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_can_role},
         $self->userid, $role );
     return $sth->fetchrow_array;
 }
@@ -332,7 +315,7 @@ sub add_roles {
     my @roles_to_insert =
       grep { defined $_ && $_ && !$self->can_role($_) } @roles;
     my @prepared_inserts = map { [ $self->userid, $_ ] } @roles_to_insert;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_add_roles},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_add_roles},
         @prepared_inserts );
     return scalar @prepared_inserts;
 }
@@ -342,17 +325,17 @@ sub delete_roles {
     return if !$self->exists_user;
     my @roles_to_delete = grep { $self->can_role($_) } @roles;
     my @prepared_deletes = map { [ $self->userid, $_ ] } @roles_to_delete;
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_delete_roles},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_delete_roles},
         @prepared_deletes );
     return scalar @prepared_deletes;
 }
-
+=cut
 # Class methods
 
 sub list_users {
     my ( $class, $conn ) = @_;
     my $self = $class->new( $conn, 'dummy_class_user' );
-    my $sth = $self->_db_run_ex( $Class::User::DBI::DB::QUERY{SQL_list_users} );
+    my $sth = $self->_db_run( $USER_QUERY{SQL_list_users} );
     return @{ $sth->fetchall_arrayref };
 }
 
@@ -361,12 +344,13 @@ sub configure_db {
     my @SQL_keys = qw(
       SQL_configure_db_users
       SQL_configure_db_user_ips
-      SQL_configure_db_user_roles
+
     );
+#      Deleted: SQL_configure_db_user_roles
     foreach my $sql_key (@SQL_keys) {
         $conn->run(
             fixup => sub {
-                $_->do( $Class::User::DBI::DB::QUERY{$sql_key} );
+                $_->do( $USER_QUERY{$sql_key} );
             }
         );
     }
