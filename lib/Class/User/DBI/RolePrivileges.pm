@@ -66,7 +66,7 @@ sub has_privilege {
       if !defined $privilege;
     croak 'Must pass a non-empty value in privilege test.'
       if !length $privilege;
-    my $p = Class::User::DBI::Privileges( $self->db_donn );
+    my $p = Class::User::DBI::Privileges->new( $self->_db_conn );
     croak 'Attempt to test a non-existent privilege.'
       if !$p->exists_privilege($privilege);
     return 1
@@ -86,7 +86,7 @@ sub has_privilege {
 
 sub add_privileges {
     my ( $self, @privileges ) = @_;
-    my $p                    = Class::User::Privileges->new( $self->_db_conn );
+    my $p               = Class::User::DBI::Privileges->new( $self->_db_conn );
     my @privileges_to_insert = grep {
              defined $_
           && length $_

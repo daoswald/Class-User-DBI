@@ -56,7 +56,7 @@ subtest 'Test Class::User::DBI::Privileges->new() -- Constructor.' => sub {
     }
     'Conctructor dies if passed a non-DBIx::Connector object.';
     dies_ok {
-        Class::User::DBI::Privileges->new('DBIx::Connector');
+        Class::User::DBI::Privileges->configure_db('DBIx::Connector');
     }
     'Constructor dies if passed a string instead of an object ref.';
 

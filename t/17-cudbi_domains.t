@@ -80,7 +80,7 @@ subtest 'Test Class::User::DBI::Domains->configure_db() -- Database Config.' =>
     }
     'configure_db(): dies if passed a non-DBIx::Connector object.';
     dies_ok {
-        Class::User::DBI::Domains->new('DBIx::Connector');
+        Class::User::DBI::Domains->configure_db('DBIx::Connector');
     }
     'configure_db(): dies if passed a string instead of an object ref.';
     ok(
