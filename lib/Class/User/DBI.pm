@@ -12,7 +12,7 @@ use List::MoreUtils qw( any );
 
 use Authen::Passphrase::SaltedSHA512;
 
-use Class::User::DBI::DB qw( %USER_QUERY _db_run_ex );
+use Class::User::DBI::DB qw( %USER_QUERY db_run_ex );
 
 our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;    ## no critic (eval)
@@ -45,16 +45,16 @@ sub _db_conn {
 sub update_email {
     my ( $self, $new_email ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_update_email},
-        $new_email, $self->userid );
+    my $sth =
+      $self->_db_run( $USER_QUERY{SQL_update_email}, $new_email,
+        $self->userid );
     return $new_email;
 }
 
 sub update_username {
     my ( $self, $new_username ) = @_;
     return if !$self->exists_user;
-    my $sth =
-      $self->_db_run( $USER_QUERY{SQL_update_username},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_update_username},
         $new_username, $self->userid );
     return $new_username;
 }
@@ -82,16 +82,15 @@ sub validated {
 sub _db_run {
     my ( $self, $sql, @ex_params ) = @_;
     my $conn = $self->_db_conn;
-    # We import _db_run_ex() from Class::User::DBI::DB.
-    return _db_run_ex( $conn, $sql, @ex_params );
+
+    # We import db_run_ex() from Class::User::DBI::DB.
+    return db_run_ex( $conn, $sql, @ex_params );
 }
 
 # Fetches all IP's that are whitelisted for the user.
 sub fetch_valid_ips {
     my $self = shift;
-    my $sth =
-      $self->_db_run( $USER_QUERY{SQL_fetch_valid_ips},
-        $self->userid );
+    my $sth = $self->_db_run( $USER_QUERY{SQL_fetch_valid_ips}, $self->userid );
     my @rv;
     while ( defined( my $row = $sth->fetchrow_arrayref ) ) {
         if ( defined $row->[0] ) {
@@ -105,8 +104,7 @@ sub fetch_valid_ips {
 sub fetch_credentials {
     my $self = shift;
     my $sth =
-      $self->_db_run( $USER_QUERY{SQL_fetch_credentials},
-        $self->userid );
+      $self->_db_run( $USER_QUERY{SQL_fetch_credentials}, $self->userid );
     my ( $salt_hex, $pass_hex, $ip_required ) = $sth->fetchrow_array;
     return if not defined $salt_hex;    # User wasn't found.
     my @valid_ips = $self->fetch_valid_ips;
@@ -153,17 +151,15 @@ sub exists_user {
     my $self = shift;
     return $self->{exists_user}
       if $self->{exists_user};    # Only query if we have to.
-    my $sth = $self->_db_run( $USER_QUERY{SQL_exists_user},
-        $self->userid );
+    my $sth = $self->_db_run( $USER_QUERY{SQL_exists_user}, $self->userid );
     return $sth->fetchrow_array;    # Will be undef if user doesn't exist.
 }
 
 # May be useful later on if we add user information.
 sub load_profile {
     my $self = shift;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_load_profile},
-        $self->userid );
-    my $hr = $sth->fetchrow_hashref;
+    my $sth  = $self->_db_run( $USER_QUERY{SQL_load_profile}, $self->userid );
+    my $hr   = $sth->fetchrow_hashref;
     return $hr;
 }
 
@@ -181,8 +177,8 @@ sub add_ips {
     # Prepare the userid,ip bundles for our insert query.
     my @execution_param_bundles =
       map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_to_insert;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_add_ips},
-        @execution_param_bundles );
+    my $sth =
+      $self->_db_run( $USER_QUERY{SQL_add_ips}, @execution_param_bundles );
 
     return scalar @ips_to_insert;    # Return a count of IP's inserted.
 }
@@ -196,8 +192,8 @@ sub delete_ips {
     my @ips_for_deletion = grep { exists $found{$_} } @ips;
     my @execution_param_bundles =
       map { [ $self->userid, unpack( 'N', inet_aton($_) ) ] } @ips_for_deletion;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_delete_ips},
-        @execution_param_bundles );
+    my $sth =
+      $self->_db_run( $USER_QUERY{SQL_delete_ips}, @execution_param_bundles );
     return scalar @ips_for_deletion;    # Return a count of IP's deleted.
 }
 
@@ -216,7 +212,7 @@ sub add_user {
     my $ips_aref =
       exists( $userinfo->{ips_aref} )
       ? $userinfo->{ips_aref}
-      : $userinfo->{ips};                          # Detect later if missing.
+      : $userinfo->{ips};               # Detect later if missing.
 
     return if $ip_req && !ref $ips_aref eq 'ARRAY';
 
@@ -261,8 +257,7 @@ sub update_password {
     my $hash_hex = $passgen->hash_hex;
     $self->_db_conn->txn(
         fixup => sub {
-            my $sth =
-              $_->prepare( $USER_QUERY{SQL_update_password} );
+            my $sth = $_->prepare( $USER_QUERY{SQL_update_password} );
             $sth->execute( $salt_hex, $hash_hex, $self->userid );
         }
     );
@@ -274,12 +269,9 @@ sub delete_user {
     return if !$self->exists_user;    # undef if user wasn't in the DB.
     $self->_db_conn->txn(
         fixup => sub {
-            my $sth =
-              $_->prepare(
-                $USER_QUERY{SQL_delete_user_users} );
+            my $sth = $_->prepare( $USER_QUERY{SQL_delete_user_users} );
             $sth->execute( $self->userid );
-            my $sth2 =
-              $_->prepare( $USER_QUERY{SQL_delete_user_ips} );
+            my $sth2 = $_->prepare( $USER_QUERY{SQL_delete_user_ips} );
             $sth2->execute( $self->userid );
         }
     );
@@ -288,7 +280,6 @@ sub delete_user {
     $self->{exists_user} = 0;    # Invalidate the exists_user cache.
     return 1;
 }
-
 
 =cut
 sub fetch_roles {
@@ -330,6 +321,7 @@ sub delete_roles {
     return scalar @prepared_deletes;
 }
 =cut
+
 # Class methods
 
 sub list_users {
@@ -346,7 +338,8 @@ sub configure_db {
       SQL_configure_db_user_ips
 
     );
-#      Deleted: SQL_configure_db_user_roles
+
+    #      Deleted: SQL_configure_db_user_roles
     foreach my $sql_key (@SQL_keys) {
         $conn->run(
             fixup => sub {

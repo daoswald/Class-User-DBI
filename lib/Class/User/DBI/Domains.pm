@@ -1,3 +1,4 @@
+## no critic (RCS,VERSION)
 package Class::User::DBI::Domains;
 
 use strict;
@@ -5,7 +6,7 @@ use warnings;
 
 use Carp;
 
-use Class::User::DBI::DB qw( _db_run_ex  %DOM_QUERY );
+use Class::User::DBI::DB qw( db_run_ex  %DOM_QUERY );
 
 our $VERSION = '0.01_003';
 $VERSION = eval $VERSION;    ## no critic (eval)
@@ -46,13 +47,13 @@ sub _db_conn {
 # returns 0 or 1.
 sub exists_domain {
     my ( $self, $domain ) = @_;
-    croak "Must pass a defined value in domain test."
+    croak 'Must pass a defined value in domain test.'
       if !defined $domain;
-    croak "Must pass a non-empty value in domain test."
+    croak 'Must pass a non-empty value in domain test.'
       if !length $domain;
     return 1 if exists $self->{domains}{$domain};
     my $sth =
-      _db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_exists_domain}, $domain );
+      db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_exists_domain}, $domain );
     my $result = defined $sth->fetchrow_array;
     $self->{domains}{$domain}++ if $result;    # Cache the result.
     return $result;
@@ -74,7 +75,7 @@ sub add_domains {
         # This change is intended to propagate back to @domains_to_insert.
         $dom_bundle->[1] = q{} if !$dom_bundle->[1];
     }
-    my $sth = _db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_add_domains},
+    my $sth = db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_add_domains},
         @domains_to_insert );
     return scalar @domains_to_insert;
 }
@@ -85,11 +86,11 @@ sub delete_domains {
     my ( $self, @domains ) = @_;
     my @domains_to_delete;
     foreach my $domain (@domains) {
-        next if !$domain or !$self->exists_domain($domain);
+        next if !$domain || !$self->exists_domain($domain);
         push @domains_to_delete, [$domain];
         delete $self->{domains}{$domain};    # Remove it from the cache too.
     }
-    my $sth = _db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_delete_domains},
+    my $sth = db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_delete_domains},
         @domains_to_delete );
     return scalar @domains_to_delete;
 }
@@ -102,7 +103,7 @@ sub get_domain_description {
     croak 'Specified domain must exist.'
       if !$self->exists_domain($domain);
     my $sth =
-      _db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_get_domain_description},
+      db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_get_domain_description},
         $domain );
     return ( $sth->fetchrow_array )[0];
 }
@@ -118,7 +119,7 @@ sub update_domain_description {
     croak 'Must specify a description (q{} is ok too).'
       if !defined $description;
     my $sth =
-      _db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_update_domain_description},
+      db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_update_domain_description},
         $description, $domain );
     return 1;
 }
@@ -126,7 +127,7 @@ sub update_domain_description {
 # Returns an array of pairs (AoA).  Pairs are [ domain, description ],...
 sub fetch_domains {
     my $self    = shift;
-    my $sth     = _db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_list_domains} );
+    my $sth     = db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_list_domains} );
     my @domains = @{ $sth->fetchall_arrayref };
     return @domains;
 }

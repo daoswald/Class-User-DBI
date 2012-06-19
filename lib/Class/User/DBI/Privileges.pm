@@ -1,3 +1,4 @@
+## no critic (RCS,VERSION)
 package Class::User::DBI::Privileges;
 
 use strict;
@@ -5,7 +6,7 @@ use warnings;
 
 use Carp;
 
-use Class::User::DBI::DB qw( _db_run_ex  %PRIV_QUERY );
+use Class::User::DBI::DB qw( db_run_ex  %PRIV_QUERY );
 
 our $VERSION = '0.01_003';
 $VERSION = eval $VERSION;    ## no critic (eval)
@@ -46,13 +47,13 @@ sub _db_conn {
 # returns 0 or 1.
 sub exists_privilege {
     my ( $self, $privilege ) = @_;
-    croak "Must pass a defined value in privilege test."
+    croak 'Must pass a defined value in privilege test.'
       if !defined $privilege;
-    croak "Must pass a non-empty value in privilege test."
+    croak 'Must pass a non-empty value in privilege test.'
       if !length $privilege;
     return 1 if exists $self->{privileges}{$privilege};
     my $sth =
-      _db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_exists_privilege},
+      db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_exists_privilege},
         $privilege );
     my $result = defined $sth->fetchrow_array;
     $self->{privileges}{$privilege}++ if $result;    # Cache the result.
@@ -78,7 +79,7 @@ sub add_privileges {
         # This change is intended to propagate back to @privs_to_insert.
         $priv_bundle->[1] = q{} if !$priv_bundle->[1];
     }
-    my $sth = _db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_add_privileges},
+    my $sth = db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_add_privileges},
         @privs_to_insert );
     return scalar @privs_to_insert;
 }
@@ -89,11 +90,11 @@ sub delete_privileges {
     my ( $self, @privileges ) = @_;
     my @privs_to_delete;
     foreach my $privilege (@privileges) {
-        next if !$privilege or !$self->exists_privilege($privilege);
+        next if !$privilege || !$self->exists_privilege($privilege);
         push @privs_to_delete, [$privilege];
         delete $self->{privileges}{$privilege};  # Remove it from the cache too.
     }
-    my $sth = _db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_delete_privileges},
+    my $sth = db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_delete_privileges},
         @privs_to_delete );
     return scalar @privs_to_delete;
 }
@@ -106,7 +107,7 @@ sub get_privilege_description {
     croak 'Specified privilege must exist.'
       if !$self->exists_privilege($privilege);
     my $sth =
-      _db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_get_privilege_description},
+      db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_get_privilege_description},
         $privilege );
     return ( $sth->fetchrow_array )[0];
 }
@@ -122,8 +123,7 @@ sub update_privilege_description {
     croak 'Must specify a description (q{} is ok too).'
       if !defined $description;
     my $sth =
-      _db_run_ex( $self->_db_conn,
-        $PRIV_QUERY{SQL_update_privilege_description},
+      db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_update_privilege_description},
         $description, $privilege );
     return 1;
 }
@@ -131,7 +131,7 @@ sub update_privilege_description {
 # Returns an array of pairs (AoA).  Pairs are [ privilege, description ],...
 sub fetch_privileges {
     my $self = shift;
-    my $sth = _db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_list_privileges} );
+    my $sth = db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_list_privileges} );
     my @privileges = @{ $sth->fetchall_arrayref };
     return @privileges;
 }

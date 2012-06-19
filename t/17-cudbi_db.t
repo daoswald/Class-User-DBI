@@ -8,7 +8,7 @@ use Test::Exception;
 use DBIx::Connector;
 
 BEGIN {
-    use_ok( 'Class::User::DBI::DB', qw( _db_run_ex %USER_QUERY %PRIV_QUERY ) );
+    use_ok( 'Class::User::DBI::DB', qw( db_run_ex %USER_QUERY %PRIV_QUERY ) );
 }
 
 # WARNING:  Tables will be dropped before and after running these tests.
@@ -37,20 +37,20 @@ my $conn = DBIx::Connector->new(
     }
 );
 
-can_ok( 'Class::User::DBI::DB', '_db_run_ex' );
+can_ok( 'Class::User::DBI::DB', 'db_run_ex' );
 
-dies_ok { _db_run_ex() }
-'_db_run_ex(): Dies if not given a DBIx::Connector object.';
-dies_ok { _db_run_ex( bless {}, 'strangeness' ) }
-'_db_run_ex(): Dies if given an object that is not DBIx::Connector.';
-dies_ok { _db_run_ex('Strangeness') }
-'_db_run_ex(): Dies if parameter is not a DBIx::Connector object.';
+dies_ok { db_run_ex() }
+'db_run_ex(): Dies if not given a DBIx::Connector object.';
+dies_ok { db_run_ex( bless {}, 'strangeness' ) }
+'db_run_ex(): Dies if given an object that is not DBIx::Connector.';
+dies_ok { db_run_ex('Strangeness') }
+'db_run_ex(): Dies if parameter is not a DBIx::Connector object.';
 
 ok(
-    _db_run_ex(
+    db_run_ex(
         $conn, 'CREATE TABLE mydbpm_test ( col1 VARCHAR(24) PRIMARY KEY )'
     ),
-    '_db_run_ex(): Connected to DB and created a test table.'
+    'db_run_ex(): Connected to DB and created a test table.'
 );
 
 done_testing();

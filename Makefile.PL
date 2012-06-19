@@ -44,6 +44,10 @@ WriteMakefile(
                 file    => 'lib/Class/User/DBI/Domains.pm',
                 version => '0.01_002',
             },
+            'Class::User::DBI::Roles' => {
+                file    => 'lib/Class/User/DBI/Domains.pm',
+                version => '0.01_002',
+            },
         },
         version   => '0.02',
         resources => {

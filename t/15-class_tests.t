@@ -70,7 +70,6 @@ $conn->run(
     }
 );
 
-
 Class::User::DBI->configure_db($conn);
 
 subtest "Tests for $appuser" => sub {

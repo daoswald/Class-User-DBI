@@ -6,14 +6,20 @@ use warnings;
 use 5.008;
 
 use Exporter;
-our @ISA    = qw( Exporter );     ## no critic (ISA)
-our @EXPORT = qw( _db_run_ex );
-our @EXPORT_OK = qw(  %USER_QUERY  %PRIV_QUERY  %DOM_QUERY _db_run_ex );
+our @ISA       = qw( Exporter );     ## no critic (ISA)
+our @EXPORT    = qw( db_run_ex );    ## no critic (export)
+our @EXPORT_OK = qw(
+  %USER_QUERY
+  %PRIV_QUERY
+  %DOM_QUERY
+  %ROLE_QUERY
+  _db_run_ex
+);
 
 use Carp;
 
 our $VERSION = '0.01_003';
-$VERSION = eval $VERSION;         ## no critic (eval)
+$VERSION = eval $VERSION;            ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
 
@@ -111,6 +117,27 @@ END_SQL
     SQL_list_domains => 'SELECT * FROM cud_domains',
 );
 
+#----------------- Queries for Class::User::DBI::Domains ---------------------
+
+our %ROLE_QUERY = (
+    SQL_configure_db_cud_roles => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS cud_roles (
+        role        VARCHAR(24)           NOT NULL,
+        description VARCHAR(40)           NOT NULL DEFAULT '',
+        PRIMARY KEY (role)
+    )
+END_SQL
+    SQL_exists_role => 'SELECT role FROM cud_roles WHERE role = ?',
+    SQL_add_roles =>
+      'INSERT INTO cud_roles ( role, description ) VALUES ( ?, ? )',
+    SQL_delete_roles => 'DELETE FROM cud_roles WHERE role = ?',
+    SQL_get_role_description =>
+      'SELECT description FROM cud_roles WHERE role = ?',
+    SQL_update_role_description =>
+      'UPDATE cud_roles SET description = ? WHERE role = ?',
+    SQL_list_roles => 'SELECT * FROM cud_roles',
+);
+
 # ------------------------------ Functions -----------------------------------
 
 # Prepares and executes a database command using DBIx::Connector's 'run'
@@ -123,7 +150,7 @@ END_SQL
 #     [ first param list ], [ second param list ], ...
 # );
 
-sub _db_run_ex {
+sub db_run_ex {
     my ( $conn, $sql, @ex_params ) = @_;
     croak ref($conn) . ' is not a DBIx::Connector.'
       if !$conn->isa('DBIx::Connector');
