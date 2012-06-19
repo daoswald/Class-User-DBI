@@ -13,6 +13,7 @@ our @EXPORT_OK = qw(
   %PRIV_QUERY
   %DOM_QUERY
   %ROLE_QUERY
+  %RP_QUERY
   _db_run_ex
 );
 
@@ -117,7 +118,7 @@ END_SQL
     SQL_list_domains => 'SELECT * FROM cud_domains',
 );
 
-#----------------- Queries for Class::User::DBI::Domains ---------------------
+#----------------- Queries for Class::User::DBI::Roles ---------------------
 
 our %ROLE_QUERY = (
     SQL_configure_db_cud_roles => << 'END_SQL',
@@ -137,6 +138,26 @@ END_SQL
       'UPDATE cud_roles SET description = ? WHERE role = ?',
     SQL_list_roles => 'SELECT * FROM cud_roles',
 );
+
+# ----------------- Queries for Class::User::DBI::RolePrivileges ------------
+
+our %RP_QUERY = (
+    SQL_configure_db_cud_roleprivs => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS cud_roleprivs (
+        role        VARCHAR(24)           NOT NULL DEFAULT '',
+        privilege   VARCHAR(24)           NOT NULL DEFAULT '',
+        PRIMARY KEY (role,privilege)
+    )
+END_SQL
+    SQL_exists_priv => 
+        'SELECT privilege FROM cud_roleprivs WHERE role = ? AND privilege = ?',
+    SQL_add_priv =>
+      'INSERT INTO cud_roleprivs ( role, privilege ) VALUES ( ?, ? )',
+    SQL_delete_priv => 
+        'DELETE FROM cud_roleprivs WHERE role = ? AND privilege = ?',
+    SQL_list_privs => 'SELECT privileges FROM cud_roleprivs WHERE role = ?',
+);
+
 
 # ------------------------------ Functions -----------------------------------
 
