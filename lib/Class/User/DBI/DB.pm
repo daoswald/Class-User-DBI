@@ -20,7 +20,7 @@ our @EXPORT_OK = qw(
 use Carp;
 
 our $VERSION = '0.01_003';
-$VERSION = eval $VERSION;            ## no critic (eval)
+$VERSION = eval $VERSION;    ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
 
@@ -149,15 +149,14 @@ our %RP_QUERY = (
         PRIMARY KEY (role,privilege)
     )
 END_SQL
-    SQL_exists_priv => 
-        'SELECT privilege FROM cud_roleprivs WHERE role = ? AND privilege = ?',
+    SQL_exists_priv =>
+      'SELECT privilege FROM cud_roleprivs WHERE role = ? AND privilege = ?',
     SQL_add_priv =>
       'INSERT INTO cud_roleprivs ( role, privilege ) VALUES ( ?, ? )',
-    SQL_delete_priv => 
-        'DELETE FROM cud_roleprivs WHERE role = ? AND privilege = ?',
-    SQL_list_privs => 'SELECT privileges FROM cud_roleprivs WHERE role = ?',
+    SQL_delete_privileges =>
+      'DELETE FROM cud_roleprivs WHERE role = ? AND privilege = ?',
+    SQL_list_privileges => 'SELECT privilege FROM cud_roleprivs WHERE role = ?',
 );
-
 
 # ------------------------------ Functions -----------------------------------
 

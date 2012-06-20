@@ -7,6 +7,8 @@ use Test::Exception;
 
 use List::MoreUtils qw( any );
 
+use Data::Dumper;
+
 BEGIN {
     use_ok('Class::User::DBI::RolePrivileges');
 }
@@ -154,38 +156,64 @@ subtest 'Test Class::User::DBI::RolePrivileges->new() -- Constructor.' => sub {
     done_testing();
 };
 
-subtest 'Test add_privileges() and has_privilege().' =>
-    sub {
-        my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
-        ok( !$rp->has_privilege('work'),
-            'has_privilege(): returns false for a privilege ' .
-            'the group doesn\t have.' 
-        );
-        dies_ok { $rp->has_privilege() }
-            'has_privilege(): throws an exception when privilege is undef.';
-        dies_ok { $rp->has_privilege( q{} ) }
-            'has_privilege(): throws an exception when privilege is empty.';
-    is( $rp->add_privileges(), 0, 
-        'add_priviliges(): When none are added, return value is 0.' 
-    );
-    #####
-    is( $rp->add_privileges( 'work', 'play_hard' ), 2,
-        'add_privileges(): When two privileges are added, return value is 2.'
-    );
-    #####
+subtest 'Test add_privileges() and has_privilege().' => sub {
+    my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
+    ok( !$rp->has_privilege('work'),
+            'has_privilege(): returns false for a privilege '
+          . 'the group doesn\t have.' );
+    dies_ok { $rp->has_privilege() }
+    'has_privilege(): throws an exception when privilege is undef.';
+    dies_ok { $rp->has_privilege(q{}) }
+    'has_privilege(): throws an exception when privilege is empty.';
+    is( $rp->add_privileges(), 0,
+        'add_priviliges(): When none are added, return value is 0.' );
+    is( $rp->add_privileges( 'work', 'play_hard' ),
+        2,
+        'add_privileges(): When two privileges are added, return value is 2.' );
     ok( $rp->has_privilege('work'),
-        'add_privileges(): Successfully added "work" privilege.' 
+        'add_privileges(): Successfully added "work" privilege.' );
+    ok( $rp->has_privilege('play_hard'),
+        'add_privileges(): Successfully added "play_hard" privilege.' );
+    is( $rp->add_privileges('tupitar'), 0,
+        'add_privileges(): Returns 0 and refuses to add an invalid privilege.'
     );
-    ok( $rp->has_privilege( 'play_hard' ), 
-        'add_privileges(): Successfully added "play_hard" privilege.'
+    ok( !$rp->has_privilege('tupitar'),
+        'add_privileges(): Didn\'t add "tupitar" (invalid privilege).' );
+
+    done_testing();
+};
+
+subtest 'Test delete_privileges().' => sub {
+    my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
+    ok(
+        $rp->has_privilege('play_hard'),
+        'has_privilege(): verifies a privilege.'
     );
-    is( $rp->add_privilege( 'tupitar' ), 0, 
-        'add_privilege(): Returns 0 and refuses to add an invalid privilege.'
+    is( $rp->delete_privileges('play_hard'),
+        1, 'delete_privilege(): Good return value for delete.' );
+    ok(
+        !$rp->has_privilege('play_hard'),
+        'delete_privilege(): Delete confirmed.'
     );
-    ok( !$rp->has_privilege( 'tupitar' ),
-        'add_privilege(): Didn\'t add "tupitar" (invalid privilege).'
-    );
-        
-        done_testing();
-    };
+    is( $rp->delete_privileges('play_hard'),
+        0, 'delete_privilege(): Refuses to delete a non-role privilege.' );
+    done_testing();
+};
+
+subtest 'Test fetch_privileges().' => sub {
+    my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
+    is( scalar $rp->fetch_privileges,
+        1, 'fetch_privileges(): Found one privilege.' );
+    $rp->add_privileges( 'play_hard', 'make_war', 'party' );
+    my @privs = $rp->fetch_privileges;
+    is( scalar @privs, 4, 'fetch_privileges(): Found four privileges.' );
+    ok( ( any { $_ eq 'make_war' } @privs ),
+        'fetch_privileges(): Identified a valid privilege.' );
+    $rp->delete_privileges( 'play_hard', 'make_war', 'party', 'work' );
+    @privs = $rp->fetch_privileges;
+    is( scalar @privs,
+        0, 'fetch_privileges(): Returns empty list if no privs.' );
+    done_testing();
+};
+
 done_testing();

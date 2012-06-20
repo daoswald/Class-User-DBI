@@ -10,6 +10,8 @@ use Class::User::DBI::DB qw( db_run_ex  %RP_QUERY );
 use Class::User::DBI::Roles;
 use Class::User::DBI::Privileges;
 
+use Data::Dumper;
+
 our $VERSION = '0.01_003';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
@@ -67,7 +69,7 @@ sub has_privilege {
     croak 'Must pass a non-empty value in privilege test.'
       if !length $privilege;
     my $p = Class::User::DBI::Privileges->new( $self->_db_conn );
-    croak 'Attempt to test a non-existent privilege.'
+    return 0
       if !$p->exists_privilege($privilege);
     return 1
       if exists $self->{privileges}{$privilege}
@@ -86,7 +88,7 @@ sub has_privilege {
 
 sub add_privileges {
     my ( $self, @privileges ) = @_;
-    my $p               = Class::User::DBI::Privileges->new( $self->_db_conn );
+    my $p = Class::User::DBI::Privileges->new( $self->_db_conn );
     my @privileges_to_insert = grep {
              defined $_
           && length $_
@@ -97,7 +99,9 @@ sub add_privileges {
       # Transform the array of privileges to an AoA of [ $role, $priv ] packets.
     @privileges_to_insert =
       map { [ $self->get_role, $_ ] } @privileges_to_insert;
-    my $sth = db_run_ex( $self->_db_conn, $RP_QUERY{SQL_add_privileges},
+    return 0 if !scalar @privileges_to_insert;
+    my $sth =
+      db_run_ex( $self->_db_conn, $RP_QUERY{SQL_add_priv},
         @privileges_to_insert );
     return scalar @privileges_to_insert;
 }
