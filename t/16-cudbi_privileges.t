@@ -17,7 +17,7 @@ can_ok(
     'Class::User::DBI::Privileges',
     qw(  _db_conn           add_privileges     configure_db
       delete_privileges  exists_privilege   fetch_privileges
-      get_privilege_description             update_privilege_description
+      get_privilege_description             set_privilege_description
       new
       )
 );
@@ -205,19 +205,19 @@ subtest 'Test get_privilege_description().' => sub {
     done_testing();
 };
 
-subtest 'Test update_privilege_description()' => sub {
-    dies_ok { $p->update_privilege_description() }
-    'update_privilege_description(): Dies if no privilege specified.';
-    dies_ok { $p->update_privilege_description('gnarfle') }
-    'update_privilege_description(): Dies if privilege doesn\t exist.';
-    dies_ok { $p->update_privilege_description('tupitar2') }
-    'update_privilege_description(): Dies if no description specified.';
+subtest 'Test set_privilege_description()' => sub {
+    dies_ok { $p->set_privilege_description() }
+    'set_privilege_description(): Dies if no privilege specified.';
+    dies_ok { $p->set_privilege_description('gnarfle') }
+    'set_privilege_description(): Dies if privilege doesn\t exist.';
+    dies_ok { $p->set_privilege_description('tupitar2') }
+    'set_privilege_description(): Dies if no description specified.';
     ok(
-        $p->update_privilege_description( 'tupitar2', 'Not gnarfling.' ),
-        'update_privilege_description(): Got a good return value'
+        $p->set_privilege_description( 'tupitar2', 'Not gnarfling.' ),
+        'set_privilege_description(): Got a good return value'
     );
     like( $p->get_privilege_description('tupitar2'),
-        qr/gnarfling/, 'update_privilege_description(): Description updated.' );
+        qr/gnarfling/, 'set_privilege_description(): Description updated.' );
     done_testing();
 };
 

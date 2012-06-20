@@ -17,7 +17,7 @@ can_ok(
     'Class::User::DBI::Roles',
     qw(  _db_conn           add_roles     configure_db
       delete_roles     exists_role   fetch_roles
-      get_role_description             update_role_description
+      get_role_description             set_role_description
       new
       )
 );
@@ -191,19 +191,19 @@ subtest 'Test get_role_description().' => sub {
     done_testing();
 };
 
-subtest 'Test update_role_description()' => sub {
-    dies_ok { $d->update_role_description() }
-    'update_role_description(): Dies if no role specified.';
-    dies_ok { $d->update_role_description('gnarfle') }
-    'update_role_description(): Dies if role doesn\t exist.';
-    dies_ok { $d->update_role_description('tupitar2') }
-    'update_role_description(): Dies if no description specified.';
+subtest 'Test set_role_description()' => sub {
+    dies_ok { $d->set_role_description() }
+    'set_role_description(): Dies if no role specified.';
+    dies_ok { $d->set_role_description('gnarfle') }
+    'set_role_description(): Dies if role doesn\t exist.';
+    dies_ok { $d->set_role_description('tupitar2') }
+    'set_role_description(): Dies if no description specified.';
     ok(
-        $d->update_role_description( 'tupitar2', 'Not gnarfling.' ),
-        'update_role_description(): Got a good return value'
+        $d->set_role_description( 'tupitar2', 'Not gnarfling.' ),
+        'set_role_description(): Got a good return value'
     );
     like( $d->get_role_description('tupitar2'),
-        qr/gnarfling/, 'update_role_description(): Description updated.' );
+        qr/gnarfling/, 'set_role_description(): Description updated.' );
     done_testing();
 };
 

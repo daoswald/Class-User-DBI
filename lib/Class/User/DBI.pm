@@ -46,33 +46,33 @@ sub _db_conn {
     return $self->{_db_conn};
 }
 
-sub update_email {
+sub set_email {
     my ( $self, $new_email ) = @_;
-    croak 'Can\'t update a user email for a user ID that doesn\'t exist.'
+    croak 'Can\'t set a user email for a user ID that doesn\'t exist.'
       if !$self->exists_user;
     my $sth =
-      $self->_db_run( $USER_QUERY{SQL_update_email}, $new_email,
+      $self->_db_run( $USER_QUERY{SQL_set_email}, $new_email,
         $self->userid );
     return $new_email;
 }
 
-sub update_username {
+sub set_username {
     my ( $self, $new_username ) = @_;
-    croak 'Can\'t update a user name for a user ID that doesn\'t exist.'
+    croak 'Can\'t set a user name for a user ID that doesn\'t exist.'
       if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_update_username},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_set_username},
         $new_username, $self->userid );
     return 1;
 }
 
-sub update_domain {
+sub set_domain {
     my ( $self, $new_domain ) = @_;
-    croak 'Can\'t update a domain for a user ID that doesn\'t exist.'
+    croak 'Can\'t set a domain for a user ID that doesn\'t exist.'
       if !$self->exists_user;
     my $d = Class::User::DBI::Domains->new( $self->_db_conn );
-    croak 'Can\'t update to an undefined domain.'
+    croak 'Can\'t set to an undefined domain.'
       if !$d->exists_domain($new_domain);
-    my $sth = $self->_db_run( $USER_QUERY{SQL_update_domain},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_set_domain},
         $new_domain, $self->userid );
     return 1;
 }
@@ -329,7 +329,7 @@ sub get_role {
 sub set_role {
     my ( $self, $role ) = @_;
     my $sth =
-      $self->_db_run( $USER_QUERY{SQL_update_role}, $role, $self->userid );
+      $self->_db_run( $USER_QUERY{SQL_set_role}, $role, $self->userid );
     return 1;
 }
 
@@ -471,9 +471,9 @@ and optionally per user IP whitelisting.
 
     my $add_count   = $user->add_ips( @ips );
 
-    my $success     = $user->update_email( 'new@email.address' );
+    my $success     = $user->set_email( 'new@email.address' );
 
-    my $success     = $user->update_username( 'Cool New User Name' );
+    my $success     = $user->set_username( 'Cool New User Name' );
 
     my $success     = $user->update_password( 'Old Pass', 'New Pass' );
 
@@ -666,9 +666,9 @@ dissimilar to passphrases used in other applications.  No minimum passphrase
 size is enforced by this module.  But a strong passphrase should be of ample
 length, and should contain characters beyond the standard alphabet.
 
-=head2  update_email
+=head2  set_email
 
-    my $success = $user->update_email( $new_email_address )
+    my $success = $user->set_email( $new_email_address )
 
 Email addresses are not verified for validity in any way.  However, the default
 database field used for storing email addresses provides 320 bytes of storage,
@@ -693,9 +693,9 @@ password.  The "without validation" version is useful for allowing an
 administrator (or automated process) to reset a user's forgotten password.
 
 
-=head2  update_username
+=head2  set_username
 
-    my $success = $user->update_username( $new_user_full_name );
+    my $success = $user->set_username( $new_user_full_name );
 
 There's probably not much need for explaining this method.  The default database
 table's C<username> field accepts user names up to fourty characters.

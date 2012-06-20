@@ -110,7 +110,7 @@ sub get_domain_description {
 
 # Pass a domain and a new description.  All parameters required.  Description
 # of q{} deletes the description.
-sub update_domain_description {
+sub set_domain_description {
     my ( $self, $domain, $description ) = @_;
     croak 'Must specify a domain.'
       if !defined $domain;
@@ -119,7 +119,7 @@ sub update_domain_description {
     croak 'Must specify a description (q{} is ok too).'
       if !defined $description;
     my $sth =
-      db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_update_domain_description},
+      db_run_ex( $self->_db_conn, $DOM_QUERY{SQL_set_domain_description},
         $description, $domain );
     return 1;
 }

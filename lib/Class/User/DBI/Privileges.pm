@@ -114,7 +114,7 @@ sub get_privilege_description {
 
 # Pass a privilege and a new description.  All parameters required.  Description
 # of q{} deletes the description.
-sub update_privilege_description {
+sub set_privilege_description {
     my ( $self, $privilege, $description ) = @_;
     croak 'Must specify a privilege.'
       if !defined $privilege;
@@ -123,7 +123,7 @@ sub update_privilege_description {
     croak 'Must specify a description (q{} is ok too).'
       if !defined $description;
     my $sth =
-      db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_update_privilege_description},
+      db_run_ex( $self->_db_conn, $PRIV_QUERY{SQL_set_privilege_description},
         $description, $privilege );
     return 1;
 }

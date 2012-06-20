@@ -51,7 +51,7 @@ subtest 'Class::User::DBI use and can tests.' => sub {
           fetch_credentials fetch_valid_ips get_domain      get_privileges
           get_role          has_privilege   is_domain       is_role
           list_users        load_profile    new             set_role
-          update_domain     update_email    update_password update_username
+          set_domain        set_email       update_password set_username
           userid            validate        validated
           )
     );
@@ -235,36 +235,37 @@ subtest 'add_user() tests.' => sub {
     done_testing();
 };
 
-subtest 'update_email() tests.' => sub {
+subtest 'set_email() tests.' => sub {
     my $user      = Class::User::DBI->new( $conn, $appuser );
     my $stats_ref = $user->load_profile;
     my $old_email = $stats_ref->{email};
     is( $old_email, 'fake@address.com',
-        'load_profile() found correct original email address.' );
-    $user->update_email('newfake@address.com');
+        'load_profile(): found correct original email address.' );
+    $user->set_email('newfake@address.com');
     $stats_ref = $user->load_profile;
     my $new_email = $stats_ref->{email};
-    is( $new_email, 'newfake@address.com', 'Email address correctly altered.' );
-    $user->update_email($old_email);    # Reset to original state.
+    is( $new_email, 'newfake@address.com', 
+        'set_email(): Email address correctly altered.' );
+    $user->set_email($old_email);    # Reset to original state.
     $user = Class::User::DBI->new( $conn, 'Invalid user' );
-    dies_ok { $user->update_email('testing@test.test') }
-    'update_email(): Dies if attempt to update email for invalid user.';
+    dies_ok { $user->set_email('testing@test.test') }
+    'set_email(): Dies if attempt to update email for invalid user.';
     done_testing();
 };
 
-subtest 'update_username() tests.' => sub {
+subtest 'set_username() tests.' => sub {
     my $user      = Class::User::DBI->new( $conn, $appuser );
     my $stats_ref = $user->load_profile;
     my $old_name  = $stats_ref->{username};
     is( $old_name, 'Test User', 'load_profile() found correct user name.' );
-    $user->update_username('Cool Test User');
+    $user->set_username('Cool Test User');
     $stats_ref = $user->load_profile;
     my $new_name = $stats_ref->{username};
-    is( $new_name, 'Cool Test User', 'update_username() set a new user name.' );
-    $user->update_username($old_name);
+    is( $new_name, 'Cool Test User', 'set_username() set a new user name.' );
+    $user->set_username($old_name);
     $user = Class::User::DBI->new( $conn, 'Invalid user' );
-    dies_ok { $user->update_username('Bogus User') }
-    'update_username(): Dies if trying to update invalid user.';
+    dies_ok { $user->set_username('Bogus User') }
+    'set_username(): Dies if trying to update invalid user.';
     done_testing();
 };
 

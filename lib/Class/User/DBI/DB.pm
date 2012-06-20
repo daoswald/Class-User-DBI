@@ -37,15 +37,15 @@ our %USER_QUERY = (
       . 'username, email, role, domain ) VALUES( ?, ?, ?, ?, ?, ?, ?, ? )',
     SQL_delete_user     => 'DELETE FROM users WHERE userid = ?',
     SQL_delete_user_ips => 'DELETE FROM user_ips WHERE userid = ?',
-    SQL_update_email    => 'UPDATE users SET email = ? WHERE userid = ?',
-    SQL_update_username => 'UPDATE users SET username = ? WHERE userid = ?',
-    SQL_update_domain   => 'UPDATE users SET domain = ? WHERE userid = ?',
+    SQL_set_email    => 'UPDATE users SET email = ? WHERE userid = ?',
+    SQL_set_username => 'UPDATE users SET username = ? WHERE userid = ?',
+    SQL_set_domain   => 'UPDATE users SET domain = ? WHERE userid = ?',
     SQL_update_password =>
       'UPDATE users SET salt = ?, password = ? WHERE userid = ?',
     SQL_list_users  => 'SELECT userid, username, email FROM users',
     SQL_get_role    => 'SELECT role FROM users WHERE userid = ?',
     SQL_is_role     => 'SELECT role FROM users WHERE userid = ? AND role = ?',
-    SQL_update_role => 'UPDATE users SET role = ? WHERE userid = ?',
+    SQL_set_role => 'UPDATE users SET role = ? WHERE userid = ?',
     SQL_get_domain  => 'SELECT domain FROM users WHERE userid = ?',
     SQL_configure_db_users => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS users (
@@ -93,7 +93,7 @@ END_SQL
     SQL_delete_privileges => 'DELETE FROM cud_privileges WHERE privilege = ?',
     SQL_get_privilege_description =>
       'SELECT description FROM cud_privileges WHERE privilege = ?',
-    SQL_update_privilege_description =>
+    SQL_set_privilege_description =>
       'UPDATE cud_privileges SET description = ? WHERE privilege = ?',
     SQL_list_privileges => 'SELECT * FROM cud_privileges',
 );
@@ -114,7 +114,7 @@ END_SQL
     SQL_delete_domains => 'DELETE FROM cud_domains WHERE domain = ?',
     SQL_get_domain_description =>
       'SELECT description FROM cud_domains WHERE domain = ?',
-    SQL_update_domain_description =>
+    SQL_set_domain_description =>
       'UPDATE cud_domains SET description = ? WHERE domain = ?',
     SQL_list_domains => 'SELECT * FROM cud_domains',
 );
@@ -135,7 +135,7 @@ END_SQL
     SQL_delete_roles => 'DELETE FROM cud_roles WHERE role = ?',
     SQL_get_role_description =>
       'SELECT description FROM cud_roles WHERE role = ?',
-    SQL_update_role_description =>
+    SQL_set_role_description =>
       'UPDATE cud_roles SET description = ? WHERE role = ?',
     SQL_list_roles => 'SELECT * FROM cud_roles',
 );

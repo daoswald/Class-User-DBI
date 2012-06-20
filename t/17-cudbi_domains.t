@@ -17,7 +17,7 @@ can_ok(
     'Class::User::DBI::Domains',
     qw(  _db_conn           add_domains     configure_db
       delete_domains     exists_domain   fetch_domains
-      get_domain_description             update_domain_description
+      get_domain_description             set_domain_description
       new
       )
 );
@@ -199,19 +199,19 @@ subtest 'Test get_domain_description().' => sub {
     done_testing();
 };
 
-subtest 'Test update_domain_description()' => sub {
-    dies_ok { $d->update_domain_description() }
-    'update_domain_description(): Dies if no domain specified.';
-    dies_ok { $d->update_domain_description('gnarfle') }
-    'update_domain_description(): Dies if domain doesn\t exist.';
-    dies_ok { $d->update_domain_description('tupitar2') }
-    'update_domain_description(): Dies if no description specified.';
+subtest 'Test set_domain_description()' => sub {
+    dies_ok { $d->set_domain_description() }
+    'set_domain_description(): Dies if no domain specified.';
+    dies_ok { $d->set_domain_description('gnarfle') }
+    'set_domain_description(): Dies if domain doesn\t exist.';
+    dies_ok { $d->set_domain_description('tupitar2') }
+    'set_domain_description(): Dies if no description specified.';
     ok(
-        $d->update_domain_description( 'tupitar2', 'Not gnarfling.' ),
-        'update_domain_description(): Got a good return value'
+        $d->set_domain_description( 'tupitar2', 'Not gnarfling.' ),
+        'set_domain_description(): Got a good return value'
     );
     like( $d->get_domain_description('tupitar2'),
-        qr/gnarfling/, 'update_domain_description(): Description updated.' );
+        qr/gnarfling/, 'set_domain_description(): Description updated.' );
     done_testing();
 };
 

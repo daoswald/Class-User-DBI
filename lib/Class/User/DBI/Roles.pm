@@ -115,7 +115,7 @@ sub get_role_description {
 
 # Pass a role and a new description.  All parameters required.  Description
 # of q{} deletes the description.
-sub update_role_description {
+sub set_role_description {
     my ( $self, $role, $description ) = @_;
     croak 'Must specify a role.'
       if !defined $role;
@@ -124,7 +124,7 @@ sub update_role_description {
     croak 'Must specify a description (q{} is ok too).'
       if !defined $description;
     my $sth =
-      db_run_ex( $self->_db_conn, $ROLE_QUERY{SQL_update_role_description},
+      db_run_ex( $self->_db_conn, $ROLE_QUERY{SQL_set_role_description},
         $description, $role );
     return 1;
 }
