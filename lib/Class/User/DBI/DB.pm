@@ -47,6 +47,8 @@ our %USER_QUERY = (
     SQL_is_role     => 'SELECT role FROM users WHERE userid = ? AND role = ?',
     SQL_set_role => 'UPDATE users SET role = ? WHERE userid = ?',
     SQL_get_domain  => 'SELECT domain FROM users WHERE userid = ?',
+    SQL_is_domain  => 
+        'SELECT domain FROM users WHERE userid = ? AND domain = ?',
     SQL_configure_db_users => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS users (
         userid      VARCHAR(24)           NOT NULL DEFAULT '',

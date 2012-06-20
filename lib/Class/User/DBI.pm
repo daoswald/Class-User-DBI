@@ -16,6 +16,7 @@ use Authen::Passphrase::SaltedSHA512;
 
 use Class::User::DBI::DB qw( %USER_QUERY db_run_ex );
 use Class::User::DBI::Domains;
+use Class::User::DBI::Roles;
 
 our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;    ## no critic (eval)
@@ -51,8 +52,7 @@ sub set_email {
     croak 'Can\'t set a user email for a user ID that doesn\'t exist.'
       if !$self->exists_user;
     my $sth =
-      $self->_db_run( $USER_QUERY{SQL_set_email}, $new_email,
-        $self->userid );
+      $self->_db_run( $USER_QUERY{SQL_set_email}, $new_email, $self->userid );
     return $new_email;
 }
 
@@ -72,8 +72,8 @@ sub set_domain {
     my $d = Class::User::DBI::Domains->new( $self->_db_conn );
     croak 'Can\'t set to an undefined domain.'
       if !$d->exists_domain($new_domain);
-    my $sth = $self->_db_run( $USER_QUERY{SQL_set_domain},
-        $new_domain, $self->userid );
+    my $sth =
+      $self->_db_run( $USER_QUERY{SQL_set_domain}, $new_domain, $self->userid );
     return 1;
 }
 
@@ -235,10 +235,10 @@ sub delete_ips {
 
 sub add_user {
     my ( $self, $userinfo ) = @_;
-
     my $password = $userinfo->{password};
-    return if not length $password;     # We require a password.
-    return if $self->exists_user;
+    croak 'Cannot create a user without a password.'
+      if !defined $password || !length $password;
+    return if $self->exists_user;       # Don't add a user already in the DB.
 
     # Default to IP not required.
     my $ip_req   = defined $userinfo->{ip_req}   ? $userinfo->{ip_req}   : 0;
@@ -247,28 +247,29 @@ sub add_user {
     my $role     = defined $userinfo->{role}     ? $userinfo->{role}     : q{};
     my $domain   = defined $userinfo->{domain}   ? $userinfo->{domain}   : q{};
     my $ips_aref =
-      exists( $userinfo->{ips_aref} )
-      ? $userinfo->{ips_aref}
-      : $userinfo->{ips};               # Detect later if missing.
+      exists $userinfo->{ips_aref} ? $userinfo->{ips_aref} : $userinfo->{ips};
 
-    return if $ip_req && !ref $ips_aref eq 'ARRAY';
+    croak 'If an IP is required "ips_aref" attribute must also be provided.'
+      if $ip_req && !ref $ips_aref eq 'ARRAY';
+    my $d = Class::User::DBI::Domains->new( $self->_db_conn );
+    croak 'Can\'t add a user with a domain that isn\'t previously defined.'
+      if length $domain && !$d->exists_domain($domain);
+    my $r = Class::User::DBI::Roles->new( $self->_db_conn );
+    croak 'Can\'t add a user with a role that isn\'t previously defined.'
+      if length $role && !$r->exists_role($role);
 
     my $passgen =
       Authen::Passphrase::SaltedSHA512->new( passphrase => $password );
-    my $salt_hex = $passgen->salt_hex;
-    my $hash_hex = $passgen->hash_hex;
+    my ( $salt_hex, $hash_hex ) = ( $passgen->salt_hex, $passgen->hash_hex );
     $self->_db_conn->txn(
         fixup => sub {
             my $sth = $_->prepare( $USER_QUERY{SQL_add_user} );
             $sth->execute( $self->userid, $salt_hex, $hash_hex, $ip_req,
                 $username, $email, $role, $domain );
-            if ( ref($ips_aref) eq 'ARRAY' ) {
-                $self->add_ips( @{$ips_aref} );
-            }
+            $self->add_ips( @{$ips_aref} ) if ref($ips_aref) eq 'ARRAY';
         }
     );
-    $self->{exists_user} = $self->userid;
-    return $self->userid;
+    return $self->{exists_user} = $self->userid;
 }
 
 sub update_password {
@@ -328,8 +329,12 @@ sub get_role {
 
 sub set_role {
     my ( $self, $role ) = @_;
-    my $sth =
-      $self->_db_run( $USER_QUERY{SQL_set_role}, $role, $self->userid );
+    croak 'Can\'t set a role for a user ID that doesn\'t exist.'
+      if !$self->exists_user;
+    my $r = Class::User::DBI::Roles->new( $self->_db_conn );
+    croak 'Can\'t set to an undefined role.'
+      if !$r->exists_role($role);
+    my $sth = $self->_db_run( $USER_QUERY{SQL_set_role}, $role, $self->userid );
     return 1;
 }
 
@@ -346,7 +351,7 @@ sub get_privileges {
     return if !$self->exists_user;
     my $role = $self->get_role;
     return if !defined $role || !length $role;
-    my $rp = Class::User::DBI::RolePrivileges( $self->_db_conn, $role );
+    my $rp = Class::User::DBI::RolePrivileges->new( $self->_db_conn, $role );
     my @privileges = $rp->fetch_privileges;
     return @privileges;
 }
@@ -356,7 +361,7 @@ sub has_privilege {
     return if !$self->exists_user;
     my $role = $self->get_role;
     return if !defined $role || !length $role;
-    my $rp = Class::User::DBI::RolePrivileges( $self->_db_conn, $role );
+    my $rp = Class::User::DBI::RolePrivileges->new( $self->_db_conn, $role );
     return $rp->has_privilege($privilege);
 }
 
@@ -369,9 +374,12 @@ sub get_domain {
 }
 
 sub is_domain {
-    my $self = shift;
+    my ( $self, $domain ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_is_domain}, $self->userid );
+    croak 'Must supply a domain to test.'
+      if !defined $domain || !length $domain;
+    my $sth =
+      $self->_db_run( $USER_QUERY{SQL_is_domain}, $self->userid, $domain );
     return 1 if $sth->fetchrow_array;
     return 0;
 }

@@ -5,7 +5,12 @@ use warnings;
 use Test::More;
 use Test::Exception;
 
+use List::MoreUtils qw( any );
+
 use Class::User::DBI;
+use Class::User::DBI::Roles;
+use Class::User::DBI::Privileges;
+use Class::User::DBI::RolePrivileges;
 
 # use Data::Dumper;
 
@@ -244,7 +249,7 @@ subtest 'set_email() tests.' => sub {
     $user->set_email('newfake@address.com');
     $stats_ref = $user->load_profile;
     my $new_email = $stats_ref->{email};
-    is( $new_email, 'newfake@address.com', 
+    is( $new_email, 'newfake@address.com',
         'set_email(): Email address correctly altered.' );
     $user->set_email($old_email);    # Reset to original state.
     $user = Class::User::DBI->new( $conn, 'Invalid user' );
@@ -294,6 +299,65 @@ subtest 'list_users() tests.' => sub {
     is( scalar( grep { $_->[0] eq $appuser } @users ),
         1, 'Found our test user.' );
     is( scalar @users > 1, 1, 'Found more than one user.' );
+    done_testing();
+};
+
+subtest 'Test domain code.' => sub {
+    Class::User::DBI::Domains->configure_db($conn);
+    my $d = new_ok( 'Class::User::DBI::Domains', [$conn] );
+    ok( $d->add_domains( [ 'test_domain', 'This user lives in testland.' ] ),
+        'Got a good return value from add_domains().' );
+    ok( $d->exists_domain('test_domain'), 'Added a test domain.' );
+    my $u = Class::User::DBI->new( $conn, $appuser );
+    ok( !$u->is_domain('test_domain'),
+        'is_domain(): Properly detects improper (or no) domain.' );
+    ok( $u->set_domain('test_domain'),
+        'Got a good return value from set_domain().' );
+    ok( $u->is_domain('test_domain'),
+        'add_domain(): Correctly added the domain.  is_domain() found it.' );
+    is( $u->get_domain, 'test_domain', 'The proper domain was set.' );
+    done_testing();
+};
+
+subtest 'Test role code.' => sub {
+    ok( Class::User::DBI::Roles->configure_db($conn),
+        'Configured a Roles table.' );
+    my $r = new_ok( 'Class::User::DBI::Roles', [$conn] );
+    ok( $r->add_roles( [ 'test_role', 'Users who can be testers.' ] ),
+        'Got a good return value from add_roles().' );
+    ok( $r->exists_role('test_role'), 'Added a test role.' );
+    my $u = Class::User::DBI->new( $conn, $appuser );
+    ok( !$u->is_role('test_role'),
+        'is_role(): Properly detects improper (or no) role.' );
+    ok( $u->set_role('test_role'), 'Got a good return value from set_role().' );
+    ok( $u->is_role('test_role'),
+        'add_role(): Correctly added the role.  is_role() found it.' );
+    is( $u->get_role, 'test_role', 'The proper role was set.' );
+    done_testing();
+};
+
+subtest 'Test role priviliges code.' => sub {
+    ok( Class::User::DBI::Privileges->configure_db($conn),
+        'Privileges table configured.' );
+    my $p = new_ok( 'Class::User::DBI::Privileges', [$conn] );
+    $p->add_privileges( [ 'work', 'The privilege to work.' ] );
+    ok( Class::User::DBI::RolePrivileges->configure_db($conn),
+        'RolePrivileges table configured.' );
+    my $rp =
+      new_ok( 'Class::User::DBI::RolePrivileges', [ $conn, 'test_role' ] );
+    ok( $rp->add_privileges('work'),
+        'Added a "work" privilege to "test_role".' );
+    my $u = Class::User::DBI->new( $conn, $appuser );
+    ok( $u->is_role('test_role'), 'User is a "test_role"' );
+    ok( $u->has_privilege('work'),
+        'has_privilege(): User has "work" privilege.' );
+    ok( $u->get_privileges,
+        'get_privileges(): Got a successful return value.' );
+    ok(
+        ( any { $_ eq 'work' } $u->get_privileges ),
+        'get_privileges(): Found the "work" privilege.'
+    );
+
     done_testing();
 };
 
