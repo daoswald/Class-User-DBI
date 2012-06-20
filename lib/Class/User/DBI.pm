@@ -6,6 +6,8 @@ use 5.008;
 use strict;
 use warnings;
 
+use Carp;
+
 use Socket qw( inet_ntoa inet_aton );
 
 use List::MoreUtils qw( any );
@@ -19,12 +21,13 @@ $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
     my ( $class, $db_conn, $userid ) = @_;
-
-    # Reject any userid that is either undefined or evaluates to false.
-    return if !defined $userid || !$userid;
+    croak 'Constructor called without a DBIx::Connector object.'
+      if !ref $db_conn || !$db_conn->isa('DBIx::Connector');
+    croak 'User ID must be defined, and at least one character in length.'
+        if ! defined $userid || ! length $userid;
     my $self = bless {}, $class;
     $self->{_db_conn}    = $db_conn;
-    $self->{userid}      = lc $userid;
+    $self->{userid}      = $userid;
     $self->{validated}   = 0;            # Start out with a non-validated user.
     $self->{exists_user} = 0;            # Start with an unproven existence.
     return $self;
@@ -44,7 +47,8 @@ sub _db_conn {
 
 sub update_email {
     my ( $self, $new_email ) = @_;
-    return if !$self->exists_user;
+    croak 'Can\'t update a user email for a user ID that doesn\'t exist.'
+        if ! $self->exists_user;
     my $sth =
       $self->_db_run( $USER_QUERY{SQL_update_email}, $new_email,
         $self->userid );
@@ -53,12 +57,21 @@ sub update_email {
 
 sub update_username {
     my ( $self, $new_username ) = @_;
-    return if !$self->exists_user;
+    croak 'Can\'t update a user name for a user ID that doesn\'t exist.'
+        if ! $self->exists_user;
     my $sth = $self->_db_run( $USER_QUERY{SQL_update_username},
         $new_username, $self->userid );
-    return $new_username;
+    return 1;
 }
 
+sub update_domain {
+    my( $self, $new_domain ) = @_;
+    croak 'Can\'t update a user name for a user ID that doesn\'t exist.'
+        if ! $self->exists_user;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_update_domain},
+        $new_domain, $self->userid );
+    return 1;
+}
 # Check validated status.  Also allow for invalidation by passing a false
 # parameter to the method.
 sub validated {
