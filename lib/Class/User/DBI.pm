@@ -947,20 +947,21 @@ and hash.
 =head1 DIAGNOSTICS
 
 If you find that your particular database engine is not playing nicely with the
-SQL from this module, it could be helpful to modify the test script found in
-C<t/15-class_tests.t>, within the distribution's directory by providing the
-database login credentials for a test database using the same engine that your
-application will actually be using.
+test suite from this module, it may be necessary to provide the database login 
+credentials for a test database using the same engine that your application 
+will actually be using.  You may do this by setting C<$ENV{CUDBI_TEST_DSN}>,
+C<$ENV{CUDBI_TEST_DATABASE}, C<$ENV{CUDBI_TEST_USER}>, 
+and C<$ENV{CUDBI_TEST_PASS}>.
 
 Currently the test suite tests against a SQLite database since it's such a
 lightweight dependency for the testing.  The author also uses this module
 with several MySQL databases.  As you're configuring your database, providing
-its credentials to C<t/15-class_tests.t> and running the test script will
-offer really good diagnostics if some aspect of your database tables proves to
-be at odds with what this module needs.
+its credentials to the tests and running the test scripts will offer really 
+good diagnostics if some aspect of your database tables proves to be at odds 
+with what this module needs.
 
 Be advised that the the test suite drops its tables after completion, so be sure
-to run C<t/15-class_tests.t> only on a database set up explicitly for testing
+to run the test suite only against a database set up explicitly for testing
 purposes.
 
 =head1 INCOMPATIBILITIES
