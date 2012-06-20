@@ -17,7 +17,6 @@ use Authen::Passphrase::SaltedSHA512;
 use Class::User::DBI::DB qw( %USER_QUERY db_run_ex );
 use Class::User::DBI::Domains;
 
-
 our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
@@ -26,12 +25,12 @@ sub new {
     croak 'Constructor called without a DBIx::Connector object.'
       if !ref $db_conn || !$db_conn->isa('DBIx::Connector');
     croak 'User ID must be defined, and at least one character in length.'
-        if ! defined $userid || ! length $userid;
+      if !defined $userid || !length $userid;
     my $self = bless {}, $class;
     $self->{_db_conn}    = $db_conn;
     $self->{userid}      = $userid;
-    $self->{validated}   = 0;            # Start out with a non-validated user.
-    $self->{exists_user} = 0;            # Start with an unproven existence.
+    $self->{validated}   = 0;          # Start out with a non-validated user.
+    $self->{exists_user} = 0;          # Start with an unproven existence.
     return $self;
 }
 
@@ -50,7 +49,7 @@ sub _db_conn {
 sub update_email {
     my ( $self, $new_email ) = @_;
     croak 'Can\'t update a user email for a user ID that doesn\'t exist.'
-        if ! $self->exists_user;
+      if !$self->exists_user;
     my $sth =
       $self->_db_run( $USER_QUERY{SQL_update_email}, $new_email,
         $self->userid );
@@ -60,23 +59,24 @@ sub update_email {
 sub update_username {
     my ( $self, $new_username ) = @_;
     croak 'Can\'t update a user name for a user ID that doesn\'t exist.'
-        if ! $self->exists_user;
+      if !$self->exists_user;
     my $sth = $self->_db_run( $USER_QUERY{SQL_update_username},
         $new_username, $self->userid );
     return 1;
 }
 
 sub update_domain {
-    my( $self, $new_domain ) = @_;
+    my ( $self, $new_domain ) = @_;
     croak 'Can\'t update a domain for a user ID that doesn\'t exist.'
-        if ! $self->exists_user;
+      if !$self->exists_user;
     my $d = Class::User::DBI::Domains->new( $self->_db_conn );
     croak 'Can\'t update to an undefined domain.'
-        if ! $d->exists_domain( $new_domain );
+      if !$d->exists_domain($new_domain);
     my $sth = $self->_db_run( $USER_QUERY{SQL_update_domain},
         $new_domain, $self->userid );
     return 1;
 }
+
 # Check validated status.  Also allow for invalidation by passing a false
 # parameter to the method.
 sub validated {
@@ -123,7 +123,8 @@ sub fetch_credentials {
     my $self = shift;
     my $sth =
       $self->_db_run( $USER_QUERY{SQL_fetch_credentials}, $self->userid );
-    my ( $salt_hex, $pass_hex, $ip_required ) = $sth->fetchrow_array;
+    my ( $salt_hex, $pass_hex, $ip_required, $role, $domain ) =
+      $sth->fetchrow_array;
     return if not defined $salt_hex;    # User wasn't found.
     my @valid_ips = $self->fetch_valid_ips;
     return {
@@ -132,15 +133,26 @@ sub fetch_credentials {
         pass_hex    => $pass_hex,
         ip_required => $ip_required,
         valid_ips   => [@valid_ips],
+        role        => $role,
+        domain      => $domain,
     };
 }
 
+# Validate returns 0 or 1.
+# 0 for any of the following conditions:
+#     Invalid userid (doesn't exist in the database).
+#     Password doesn't match.
+#     IP required but no IP parameter passed.
+#     IP required but IP doesn't match whitelist.
 sub validate {
     my ( $self, $password, $ip, $force_revalidate ) = @_;
+    croak 'Cannot validate without a passphrase.'
+      if !defined $password || !length $password;
+    return 0 if !$self->exists_user;
 
     # Save ourselves work if user is already authenticated.
-    if ( $self->validated ) {
-        return $self->userid;
+    if ( !$force_revalidate && $self->validated ) {
+        return 1;
     }
     my $credentials = $self->fetch_credentials;
     my $auth        = Authen::Passphrase::SaltedSHA512->new(
@@ -148,29 +160,35 @@ sub validate {
         hash_hex => $credentials->{pass_hex}
     );
 
-    # Return undef if password doesn't authenticate for the user.
-    return unless $auth->match($password);    ## no critic (postfix)
+    # Return false if password doesn't match.
+    if ( !$auth->match($password) ) {
+        $self->validated(0);
+        return 0;
+    }
 
-    # Return undef if an IP is required, and IP param is not in whitelist.
+    # Return 0 if an IP is required, and IP param is not in whitelist,
+    # or no IP parameter passed.
     if ( $credentials->{ip_required} ) {
-        ## no critic (postfix)
-        return unless defined $ip;            # Reject if no IP param.
-        return unless any { $ip eq $_ } @{ $credentials->{valid_ips} };
+        if (   !defined $ip
+            || !any { $ip eq $_ } @{ $credentials->{valid_ips} } )
+        {
+            $self->validated(0);
+            return 0;
+        }
     }
 
     # We passed! Authenticate.
     $self->{validated} = 1;    # Set in object that we're authenticated.
-    return $self->userid;
+    return 1;
 }
 
 # Quick check whether a userid exists in the database.
-# Return undef if user doesn't exist.
+# Return 0 if user doesn't exist.
 sub exists_user {
     my $self = shift;
-    return $self->{exists_user}
-      if $self->{exists_user};    # Only query if we have to.
+    return 1 if $self->{exists_user};    # Only query if we have to.
     my $sth = $self->_db_run( $USER_QUERY{SQL_exists_user}, $self->userid );
-    return $sth->fetchrow_array;    # Will be undef if user doesn't exist.
+    return defined $sth->fetchrow_array ? 1 : 0;
 }
 
 # May be useful later on if we add user information.
@@ -288,7 +306,7 @@ sub delete_user {
     return if !$self->exists_user;    # undef if user wasn't in the DB.
     $self->_db_conn->txn(
         fixup => sub {
-            my $sth = $_->prepare( $USER_QUERY{SQL_delete_user_users} );
+            my $sth = $_->prepare( $USER_QUERY{SQL_delete_user} );
             $sth->execute( $self->userid );
             my $sth2 = $_->prepare( $USER_QUERY{SQL_delete_user_ips} );
             $sth2->execute( $self->userid );
@@ -300,30 +318,60 @@ sub delete_user {
     return 1;
 }
 
-#### Work needed.
 sub get_role {
     my $self = shift;
     return if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_get_role},
-        $self->userid );
+    my $sth = $self->_db_run( $USER_QUERY{SQL_get_role}, $self->userid );
     my $role = ( $sth->fetchrow_array )[0];
     return $role;
 }
 
-#### Work needed.
 sub set_role {
-    my( $self, $role ) = @_;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_update_role},
-        $role, $self->userid );
+    my ( $self, $role ) = @_;
+    my $sth =
+      $self->_db_run( $USER_QUERY{SQL_update_role}, $role, $self->userid );
     return 1;
 }
 
-#### Work needed.
 sub is_role {
     my ( $self, $role ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_is_role},
-        $self->userid, $role );
+    my $sth = $self->_db_run( $USER_QUERY{SQL_is_role}, $self->userid, $role );
+    return 1 if $sth->fetchrow_array;
+    return 0;
+}
+
+sub get_privileges {
+    my $self = shift;
+    return if !$self->exists_user;
+    my $role = $self->get_role;
+    return if !defined $role || !length $role;
+    my $rp = Class::User::DBI::RolePrivileges( $self->_db_conn, $role );
+    my @privileges = $rp->fetch_privileges;
+    return @privileges;
+}
+
+sub has_privilege {
+    my ( $self, $privilege ) = @_;
+    return if !$self->exists_user;
+    my $role = $self->get_role;
+    return if !defined $role || !length $role;
+    my $rp = Class::User::DBI::RolePrivileges( $self->_db_conn, $role );
+    return $rp->has_privilege($privilege);
+}
+
+sub get_domain {
+    my $self = shift;
+    return if !$self->exists_user;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_get_domain}, $self->userid );
+    my $domain = ( $sth->fetchrow_array )[0];
+    return $domain;
+}
+
+sub is_domain {
+    my $self = shift;
+    return if !$self->exists_user;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_is_domain}, $self->userid );
     return 1 if $sth->fetchrow_array;
     return 0;
 }
