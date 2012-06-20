@@ -30,23 +30,22 @@ our %USER_QUERY = (
       'SELECT salt, password, ip_required FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
     SQL_load_profile =>
-      'SELECT userid, username, email FROM users WHERE userid = ?',
+      'SELECT userid, username, email, role, domain FROM users WHERE userid = ?',
     SQL_add_ips    => 'INSERT INTO user_ips ( userid, ip ) VALUES( ?, ? )',
     SQL_delete_ips => 'DELETE FROM user_ips WHERE userid = ? AND ip = ?',
     SQL_add_user => 'INSERT INTO users ( userid, salt, password, ip_required, '
-      . 'username, email ) VALUES( ?, ?, ?, ?, ?, ? )',
+      . 'username, email, role, domain ) VALUES( ?, ?, ?, ?, ?, ?, ?, ? )',
     SQL_delete_user_users => 'DELETE FROM users WHERE userid = ?',
     SQL_delete_user_ips   => 'DELETE FROM user_ips WHERE userid = ?',
-    SQL_delete_user_roles => 'DELETE FROM user_roles WHERE userid = ?',
     SQL_update_email      => 'UPDATE users SET email = ? WHERE userid = ?',
     SQL_update_username   => 'UPDATE users SET username = ? WHERE userid = ?',
+    SQL_update_domain     => 'UPDATE users SET domain = ? WHERE userid = ?',
     SQL_update_password =>
       'UPDATE users SET salt = ?, password = ? WHERE userid = ?',
     SQL_list_users  => 'SELECT userid, username, email FROM users',
-    SQL_fetch_roles => 'SELECT role FROM user_roles WHERE userid = ?',
-    SQL_can_role => 'SELECT role FROM user_roles WHERE userid = ? AND role = ?',
-    SQL_add_roles => 'INSERT INTO user_roles ( userid, role ) VALUES ( ?, ? )',
-    SQL_delete_roles => 'DELETE FROM user_roles WHERE userid = ? AND role = ?',
+    SQL_get_role => 'SELECT role FROM users WHERE userid = ?',
+    SQL_is_role => 'SELECT role FROM users WHERE userid = ? AND role = ?',
+    SQL_update_role => 'UPDATE users SET role = ? WHERE userid = ?',
     SQL_configure_db_users => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS users (
         userid      VARCHAR(24)           NOT NULL DEFAULT '',
@@ -55,7 +54,8 @@ our %USER_QUERY = (
         ip_required TINYINT(1)            NOT NULL DEFAULT '1',
         username    VARCHAR(40)           DEFAULT NULL,
         email       VARCHAR(320)          DEFAULT NULL,
-        role        varchar(24)           DEFAULT NULL,
+        role        VARCHAR(24)           DEFAULT NULL,
+        domain      VARCHAR(24)           DEFAULT NULL,
         PRIMARY KEY( userid )
     )
 END_SQL

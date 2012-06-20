@@ -15,6 +15,8 @@ use List::MoreUtils qw( any );
 use Authen::Passphrase::SaltedSHA512;
 
 use Class::User::DBI::DB qw( %USER_QUERY db_run_ex );
+use Class::User::DBI::Domains;
+
 
 our $VERSION = '0.01_002';
 $VERSION = eval $VERSION;    ## no critic (eval)
@@ -66,8 +68,11 @@ sub update_username {
 
 sub update_domain {
     my( $self, $new_domain ) = @_;
-    croak 'Can\'t update a user name for a user ID that doesn\'t exist.'
+    croak 'Can\'t update a domain for a user ID that doesn\'t exist.'
         if ! $self->exists_user;
+    my $d = Class::User::DBI::Domains->new( $self->_db_conn );
+    croak 'Can\'t update to an undefined domain.'
+        if ! $d->exists_domain( $new_domain );
     my $sth = $self->_db_run( $USER_QUERY{SQL_update_domain},
         $new_domain, $self->userid );
     return 1;
@@ -221,7 +226,8 @@ sub add_user {
     my $ip_req   = defined $userinfo->{ip_req}   ? $userinfo->{ip_req}   : 0;
     my $username = defined $userinfo->{username} ? $userinfo->{username} : q{};
     my $email    = defined $userinfo->{email}    ? $userinfo->{email}    : q{};
-
+    my $role     = defined $userinfo->{role}     ? $userinfo->{role}     : q{};
+    my $domain   = defined $userinfo->{domain}   ? $userinfo->{domain}   : q{};
     my $ips_aref =
       exists( $userinfo->{ips_aref} )
       ? $userinfo->{ips_aref}
@@ -237,7 +243,7 @@ sub add_user {
         fixup => sub {
             my $sth = $_->prepare( $USER_QUERY{SQL_add_user} );
             $sth->execute( $self->userid, $salt_hex, $hash_hex, $ip_req,
-                $username, $email );
+                $username, $email, $role, $domain );
             if ( ref($ips_aref) eq 'ARRAY' ) {
                 $self->add_ips( @{$ips_aref} );
             }
@@ -294,46 +300,33 @@ sub delete_user {
     return 1;
 }
 
-=cut
-sub fetch_roles {
+#### Work needed.
+sub get_role {
     my $self = shift;
     return if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_fetch_roles},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_get_role},
         $self->userid );
-    my $roles_aoa = $sth->fetchall_arrayref;
-    my @roles = map { $_->[0] } @{$roles_aoa};
-    return @roles;
+    my $role = ( $sth->fetchrow_array )[0];
+    return $role;
 }
 
-sub can_role {
+#### Work needed.
+sub set_role {
+    my( $self, $role ) = @_;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_update_role},
+        $role, $self->userid );
+    return 1;
+}
+
+#### Work needed.
+sub is_role {
     my ( $self, $role ) = @_;
     return if !$self->exists_user;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_can_role},
+    my $sth = $self->_db_run( $USER_QUERY{SQL_is_role},
         $self->userid, $role );
-    return $sth->fetchrow_array;
+    return 1 if $sth->fetchrow_array;
+    return 0;
 }
-
-sub add_roles {
-    my ( $self, @roles ) = @_;
-    return if !$self->exists_user;
-    my @roles_to_insert =
-      grep { defined $_ && $_ && !$self->can_role($_) } @roles;
-    my @prepared_inserts = map { [ $self->userid, $_ ] } @roles_to_insert;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_add_roles},
-        @prepared_inserts );
-    return scalar @prepared_inserts;
-}
-
-sub delete_roles {
-    my ( $self, @roles ) = @_;
-    return if !$self->exists_user;
-    my @roles_to_delete = grep { $self->can_role($_) } @roles;
-    my @prepared_deletes = map { [ $self->userid, $_ ] } @roles_to_delete;
-    my $sth = $self->_db_run( $USER_QUERY{SQL_delete_roles},
-        @prepared_deletes );
-    return scalar @prepared_deletes;
-}
-=cut
 
 # Class methods
 
@@ -349,10 +342,7 @@ sub configure_db {
     my @SQL_keys = qw(
       SQL_configure_db_users
       SQL_configure_db_user_ips
-
     );
-
-    #      Deleted: SQL_configure_db_user_roles
     foreach my $sql_key (@SQL_keys) {
         $conn->run(
             fixup => sub {
