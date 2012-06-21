@@ -138,7 +138,7 @@ __END__
 
 =head1 NAME
 
-Class::User::DBI - A User class: Login credentials and roles.
+Class::User::DBI::Domains - A Domains class.
 
 =head1 VERSION
 
@@ -146,9 +146,8 @@ Version 0.01_001
 
 =head1 SYNOPSIS
 
-Through a DBIx::Connector object, this module models a "User" class, with
-login credentials, and access roles.  Login credentials include a passphrase,
-and optionally per user IP whitelisting.
+Through a DBIx::Connector object, this module models a "Domains" class, used 
+for Roles Based Access Control.  
 
     # Set up a connection using DBIx::Connector:
     # MySQL database settings:
@@ -162,18 +161,67 @@ and optionally per user IP whitelisting.
     );
 
 
-    # Now we can play with Class::User::DBI:
+    # Now we can play with Class::User::DBI::Domains
 
-    Class::User::DBI->configure_db( $conn );  # Set up the tables for a user DB.
+    # Set up a 'domains' table in the database.
+    Class::User::DBI::Roles->configure_db( $conn );
+    
+    my $d = Class::User::DBI::Domains->new( $conn );
 
-    my @user_list = Class::User::DBI->list_users;
+    $p->add_domains( 
+        [ 'portland',    'Portland, Oregon location'       ],
+        [ 'los angeles', 'Los Angeles, California location' ],
+    );
 
-    my $user = new( $conn, $userid );
+    print "Domain exists." if $p->exists_domain( 'Los Angeles' );
 
+    my @domains = $p->fetch_domains;
+    foreach my $domain ( @domains ) {
+        my( $name, $description ) = @{$domain};
+        print "$name => $description\n";
+    }
+
+    print "Description for 'Portland' domain: ", 
+          $d->get_domain_description( 'Portland' );
+    
+    $d->set_domain_description( 'Portland', 'Portland, Maine location' );
+    
+    $d->delete_domains( 'Portland' ); # Pass a list for multiple deletes.
 
 
 =head1 DESCRIPTION
 
+This is a maintenance class facilitating the creation, deletion, and testing of
+domains that are compatible with Class::User::DBI::UserDomains.
+
+With Class::User::DBI each user may have multiple domains (handled by
+C<Class::User::DBI::UserDomains>, and testable through either that module or
+C<Class::User::DBI>).  An example of how a domain might be used: User 'john' has 
+the "downtown" domain.  'karen' has the east-side domain.  'nancy' is a manager 
+responsible for both downtown and the east-side, so nancy has both domains.
+
+Domains are completely independent of roles and privileges.  They allow for a
+separate layer of granularity for access control.  The layer may be used for 
+location based access control, jurisdiction/stewardship access control... 
+whatever.  It's just another set of constraints that can operate independently 
+of roles and privileges.
+
+A common usage is to configure a database table, and then add a few locations
+(domains) along with their descriptions.  Next add one or more locations (or
+domains) to a user's domain set through Class::User::DBI::UserDomains.  Finally,
+test your Class::User::DBI object to see if the user owned by a given object 
+belongs to a given domain.
+
+Think of domains as a locality.  In the context of Class::User::DBI, a user may 
+have a role which has privileges. And those privileges may be used within any 
+of the user's domains or localities. That a "west coast" domain user who has 
+the "sales" role might gain access only to "west coast" sales figures, while 
+the user with an "east coast" domain who also has a "sales" role (with all the 
+same privileges) may only gain access to east coast sales figures.  Of course 
+the domain(s) are just flags or attributes, similar to roles and privileges, 
+but independent of the roles/privileges structure.  What you do with these 
+attributes is up to you.  I like to use them to represent literal locations
+where a user my exercise the privileges granted by his role.
 
 =head1 EXPORT
 
@@ -187,18 +235,79 @@ described in the next section.
 =head2  new
 (The constructor -- Class method.)
 
-    my $user_obj = Class::User::DBI->new( $connector, $userid );
+    my $domain_obj = Class::User::DBI::Domains->new( $connector );
+
+Creates a domain object that can be manipulated to set and get roles from 
+the database's 'cud_domains' table.  Pass a DBIx::Connector object as a 
+parameter.  Throws an exception if it doesn't get a valid DBIx::Connector.
 
 
 =head2  configure_db
 (Class method)
 
-    Class::User::DBI->configure_db( $connector );
+    Class::User::DBI::Domains->configure_db( $connector );
 
 This is a class method.  Pass a valid DBIx::Connector as a parameter.  Builds
-a minimal set of database tables in support of the Class::User::DBI.
+a minimal database table in support of the Class::User::DBI::Domains class.
 
-The tables created will be C<users>, C<user_ips>, and C<user_roles>.
+The table created will be C<cud_domains>.
+
+=head2 add_domains
+
+    $d->add_domains( [ 'Salt Lake City', 'Salt Lake City, Utah' ], ... );
+
+Add one or more domains.  Each domain must be bundled along with its 
+description in an array ref.  Pass an AoA for multiple domains, or just an 
+aref for a single domain/description pair.
+
+It will drop requests to add domains that already exist.
+
+Returns a count of domains added, which may be less than the number passed if 
+one already existed.
+
+=head2 delete_domains
+
+    $d->delete_domains( 'Portland', 'Los Angeles' ); # Closed two locations.
+
+Deletes from the database all domains specified.  Return value is the number 
+of domains actually deleted, which may be less than the number of domains
+requested if any of the requested domains didn't exist in the database to 
+begin with.
+
+
+=head2 exists_domain
+
+    print "Domain exists." if $d->exists_domain( 'Portland' );
+
+Returns true if a given domain exists, and false if not.
+
+=head2 fetch_domains
+
+    foreach my $domain ( $d->fetch_domains ) {
+        print "$domain->[0] = $domain->[1]\n";
+    }
+    
+Returns an array of array refs.  Each array ref contains the domain's name 
+and its description as the first and second elements, respectively.
+
+An empty list means there are no domains defined.
+
+=head2 get_domain_description
+
+    my $description = $d->get_domain_description( 'Portland' );
+    
+Returns the description for a given domain.  Throws an exception if the 
+domain doesn't exist, so be sure to test with 
+C<< $r->exists_domain( 'Portland' ) >> first.
+
+=head2 set_domain_description
+
+    $d->set_domain_description( 'Portland', 'Portland, Oregon again now.' );
+
+Sets a new description for a given domain.  If the domain doesn't exist 
+in the database, if not enough parameters are passed, or if any of the params 
+are C<undef>, an exception will be thrown.  To update a domain by giving it 
+a blank description, pass an empty string as the description.
 
 
 =head1 DEPENDENCIES
@@ -214,7 +323,7 @@ If you find that your particular database engine is not playing nicely with the
 test suite from this module, it may be necessary to provide the database login 
 credentials for a test database using the same engine that your application 
 will actually be using.  You may do this by setting C<$ENV{CUDBI_TEST_DSN}>,
-C<$ENV{CUDBI_TEST_DATABASE}, C<$ENV{CUDBI_TEST_USER}>, 
+C<$ENV{CUDBI_TEST_DATABASE}>, C<$ENV{CUDBI_TEST_USER}>, 
 and C<$ENV{CUDBI_TEST_PASS}>.
 
 Currently the test suite tests against a SQLite database since it's such a

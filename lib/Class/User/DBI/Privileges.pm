@@ -272,7 +272,7 @@ Returns true if a given privilege exists, and false if not.
 =head2 fetch_privileges
 
     foreach my $priv ( $p->fetch_privileges ) {
-        print "$_->[0] = $_->[1]\n";
+        print "$priv->[0] = $priv->[1]\n";
     }
     
 Returns an array of array refs.  Each array ref contains the privilege's name 
@@ -311,7 +311,7 @@ If you find that your particular database engine is not playing nicely with the
 test suite from this module, it may be necessary to provide the database login 
 credentials for a test database using the same engine that your application 
 will actually be using.  You may do this by setting C<$ENV{CUDBI_TEST_DSN}>,
-C<$ENV{CUDBI_TEST_DATABASE}, C<$ENV{CUDBI_TEST_USER}>, 
+C<$ENV{CUDBI_TEST_DATABASE}>, C<$ENV{CUDBI_TEST_USER}>, 
 and C<$ENV{CUDBI_TEST_PASS}>.
 
 Currently the test suite tests against a SQLite database since it's such a

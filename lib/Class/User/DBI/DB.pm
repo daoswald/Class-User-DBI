@@ -262,7 +262,7 @@ If you find that your particular database engine is not playing nicely with the
 test suite from this module, it may be necessary to provide the database login 
 credentials for a test database using the same engine that your application 
 will actually be using.  You may do this by setting C<$ENV{CUDBI_TEST_DSN}>,
-C<$ENV{CUDBI_TEST_DATABASE}, C<$ENV{CUDBI_TEST_USER}>, 
+C<$ENV{CUDBI_TEST_DATABASE}>, C<$ENV{CUDBI_TEST_USER}>, 
 and C<$ENV{CUDBI_TEST_PASS}>.
 
 Currently the test suite tests against a SQLite database since it's such a

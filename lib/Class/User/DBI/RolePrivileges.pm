@@ -142,7 +142,7 @@ __END__
 
 =head1 NAME
 
-Class::User::DBI - A User class: Login credentials and roles.
+Class::User::DBI::Privileges - A user roles and privileges class.
 
 =head1 VERSION
 
@@ -150,9 +150,8 @@ Version 0.01_001
 
 =head1 SYNOPSIS
 
-Through a DBIx::Connector object, this module models a "User" class, with
-login credentials, and access roles.  Login credentials include a passphrase,
-and optionally per user IP whitelisting.
+Through a DBIx::Connector object, this module models a class of privileges
+belonging to roles.
 
     # Set up a connection using DBIx::Connector:
     # MySQL database settings:
@@ -166,18 +165,41 @@ and optionally per user IP whitelisting.
     );
 
 
-    # Now we can play with Class::User::DBI:
+    # Now we can play with Class::User::DBI::RolePrivileges
 
-    Class::User::DBI->configure_db( $conn );  # Set up the tables for a user DB.
+    # Set up a 'role-privileges' table in the database.
+    Class::User::DBI::RolePrivileges->configure_db( $conn );
+    
+    # Instantiate a "worker_role" role so that we can manipulate its privileges.
+    my $rp = Class::User::DBI::Privileges->new( $conn, 'worker_role' );
 
-    my @user_list = Class::User::DBI->list_users;
+    $rp->add_privileges( 'work', 'play' ); # This role can work and play.
 
-    my $user = new( $conn, $userid );
+    print "Workers can play.\n" if $rp->has_privilege( 'play' );
 
+    my @privileges = $rp->fetch_privileges;
+    foreach my $privilege ( @privileges ) {
+        print "Workers can $privilege\n";
+    }
+    
+    $rp->delete_privileges( 'work' ); # Pass a list for multiple deletes.
 
 
 =head1 DESCRIPTION
 
+This is a maintenance class facilitating the creation, deletion, and testing of
+privileges belonging to a role.
+
+A common usage is to configure a 'cud_roleprivileges' database table, and then 
+add a few role => privilege pairs.  Privileges are authorizations that a
+given role (group) may have.  Using C<Class::User::DBI::Roles> you have set up
+a list of roles and their descriptions.  Using C<Class::User::DBI::Privileges>
+you have set up a list of privileges and their descriptions.  Now this class
+allows you to assign one or more of those privileges to the defined roles.
+
+Next, Class::User::DBI may be used to assign a role to a user.  Finally, 
+the user object may be queried to determine if a user has a given privilege 
+(by his association with his assigned role).
 
 =head1 EXPORT
 
@@ -191,18 +213,69 @@ described in the next section.
 =head2  new
 (The constructor -- Class method.)
 
-    my $user_obj = Class::User::DBI->new( $connector, $userid );
+    my $role_priv_obj = Class::User::DBI::Privileges->new( $connector, $role );
 
+Creates a role-privileges object that can be manipulated to set and get 
+privileges for the instantiated role.  These role/privilege pairs will be stored
+in a database table named C<cud_roleprivileges>.  Throws an exception if it 
+doesn't get a valid DBIx::Connector or a valid role (where valid means the role
+exists in the C<roles> table managed by C<Class::User::DBI::Roles>.
 
 =head2  configure_db
 (Class method)
 
-    Class::User::DBI->configure_db( $connector );
+    Class::User::DBI::RolePrivileges->configure_db( $connector );
 
 This is a class method.  Pass a valid DBIx::Connector as a parameter.  Builds
-a minimal set of database tables in support of the Class::User::DBI.
+a minimal database table in support of the Class::User::DBI::Privileges class.
 
-The tables created will be C<users>, C<user_ips>, and C<user_roles>.
+The table created will be C<cud_roleprivileges>.
+
+=head2 add_privileges
+
+    $rp->add_privileges( 'goof_off', 'work', ... );
+
+Add one or more privileges.  Each privilege must match a privilege that lives in
+the C<privileges> database, managed by C<Class::User::DBI::Privileges>.
+
+It will drop requests to add privileges that already exist for a given role.
+
+Returns a count of privileges added, which may be less than the number passed if 
+one already existed.
+
+=head2 delete_privileges
+
+    $rp->delete_privileges( 'goof_off', 'play' ); # Now we can only work.
+
+Deletes from the role all privileges specified.  Return value is the number 
+of privileges actually deleted, which may be less than the number of privileges
+requested if any of the requested privileges don't exist for the object's target
+role.
+
+
+=head2 has_privilege
+
+    print "This role has the 'work' privilege." 
+        if $rp->has_privilege( 'work' );
+
+Returns true if a given privilege exists for the object's target role, and 
+false if not.
+
+=head2 fetch_privileges
+
+    foreach my $rolepriv ( $rp->fetch_privileges ) {
+        print "$rolepriv->[0] = $rolepriv->[1]\n";
+    }
+    
+Returns a list of privileges belonging to the object's target role.
+
+An empty list means there are no privileges defined for this role.
+
+=head2 get_role
+
+    my $role = $rp->get_role;
+
+Just an accessor for reading the object's target role name.
 
 
 =head1 DEPENDENCIES
@@ -218,7 +291,7 @@ If you find that your particular database engine is not playing nicely with the
 test suite from this module, it may be necessary to provide the database login 
 credentials for a test database using the same engine that your application 
 will actually be using.  You may do this by setting C<$ENV{CUDBI_TEST_DSN}>,
-C<$ENV{CUDBI_TEST_DATABASE}, C<$ENV{CUDBI_TEST_USER}>, 
+C<$ENV{CUDBI_TEST_DATABASE}>, C<$ENV{CUDBI_TEST_USER}>, 
 and C<$ENV{CUDBI_TEST_PASS}>.
 
 Currently the test suite tests against a SQLite database since it's such a
@@ -299,4 +372,3 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
