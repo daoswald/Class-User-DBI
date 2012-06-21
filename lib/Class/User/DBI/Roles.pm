@@ -143,7 +143,7 @@ __END__
 
 =head1 NAME
 
-Class::User::DBI - A User class: Login credentials and roles.
+Class::User::DBI::Roles - A Roles class.
 
 =head1 VERSION
 
@@ -151,9 +151,11 @@ Version 0.01_001
 
 =head1 SYNOPSIS
 
-Through a DBIx::Connector object, this module models a "User" class, with
-login credentials, and access roles.  Login credentials include a passphrase,
-and optionally per user IP whitelisting.
+Through a DBIx::Connector object, this module models a "Roles" class, used for
+Roles Based Access Control.  Class::User::DBI allows each user to have a single
+role.  Class::User::DBI::RolePrivileges allows each role to have multiple
+privileges.  And so goes the heirarchy: A user has a role, and a role has
+privileges.
 
     # Set up a connection using DBIx::Connector:
     # MySQL database settings:
@@ -167,18 +169,46 @@ and optionally per user IP whitelisting.
     );
 
 
-    # Now we can play with Class::User::DBI:
+    # Now we can play with Class::User::DBI::Roles
 
-    Class::User::DBI->configure_db( $conn );  # Set up the tables for a user DB.
+    # Set up a 'roles' table in the database.
+    Class::User::DBI::Roles->configure_db( $conn );
+    
+    my $r = Class::User::DBI::Roles->new( $conn );
 
-    my @user_list = Class::User::DBI->list_users;
+    $r->add_roles( 
+        [ 'office', 'Office users'  ],
+        [ 'admin',  'Administrator' ],
+    );
 
-    my $user = new( $conn, $userid );
+    print "Role exists." if $r->exists_role( 'office' );
 
+    my @roles = $r->fetch_roles;
+    foreach my $role ( @roles ) {
+        my( $name, $description ) = @{$role};
+        print "$name => $description\n";
+    }
+
+    print "Description for 'office' role: ", 
+          $r->get_role_description( 'office' );
+    
+    $r->set_role_description( 'office', 'Office staff' );
+    
+    $r->delete_roles( 'office' ); # Pass a list for multiple deletes.
 
 
 =head1 DESCRIPTION
 
+This is a maintenance class facilitating the creation, deletion, and testing of
+roles that are compatible with Class::User::DBI's roles, and 
+Class::User::DBI::RolePrivileges roles.
+
+A common usage is to configure a database table, and then add a few roles
+along with their descriptions.  Think of roles as similar to Unix 'groups'.
+Then use Class::User::DBI::Priviliges to create a few privileges.  Next use
+Class::User::DBI::RolePrivileges to associate one or more privileges with a
+given role.  Finally, use Class::User::DBI to associate a role with one or
+more users.
 
 =head1 EXPORT
 
@@ -192,18 +222,78 @@ described in the next section.
 =head2  new
 (The constructor -- Class method.)
 
-    my $user_obj = Class::User::DBI->new( $connector, $userid );
+    my $role_obj = Class::User::DBI::Roles->new( $connector );
+
+Creates a role object that can be manipulated to set and get roles from the
+database's 'cud_roles' table.  Pass a DBIx::Connector object as a parameter.  
+Throws an exception if it doesn't get a valid DBIx::Connector.
 
 
 =head2  configure_db
 (Class method)
 
-    Class::User::DBI->configure_db( $connector );
+    Class::User::DBI::Roles->configure_db( $connector );
 
 This is a class method.  Pass a valid DBIx::Connector as a parameter.  Builds
-a minimal set of database tables in support of the Class::User::DBI.
+a minimal database table in support of the Class::User::DBI::Roles 
+class.
 
-The tables created will be C<users>, C<user_ips>, and C<user_roles>.
+The table created will be C<cud_roles>.
+
+=head2 add_roles
+
+    $r->add_roles( [ 'office', 'The office staff' ], ... );
+
+Add one or more roles.  Each role must be bundled along with its description in
+an array ref.  Pass an AoA for multiple roles, or just an aref for a single
+role/description pair.
+
+It will drop requests to add roles that already exist.
+
+Returns a count of roles added, which may be less than the number passed if one
+already existed.
+
+=head2 delete_roles
+
+    $r->delete_roles( 'office', 'sales' );
+
+Deletes from the database all roles specified.  Return value is the number of
+roles actually deleted, which may be less than the number of roles requested if
+any of the requested roles didn't exist in the database to begin with.
+
+
+=head2 exists_role
+
+    print "Role exists." if $r->exists_role( 'office' );
+
+Returns true if a given role exists, and false if not.
+
+=head2 fetch_roles
+
+    foreach my $role ( $r->fetch_roles ) {
+        print "$_->[0] = $_->[1]\n";
+    }
+    
+Returns an array of array refs.  Each array ref contains the role's name and its
+description as the first and second elements, respectively.
+
+An empty list means there are no roles defined.
+
+=head2 get_role_description
+
+    my $description = $r->get_role_description( 'office' );
+    
+Returns the description for a given role.  Throws an exception if the role 
+doesn't exist, so be sure to test with C<< $r->exists_role( 'office' ) >> first.
+
+=head2 set_role_description
+
+    $r->set_role_description( 'office', 'New description for office role.' );
+
+Sets a new description for a given role.  If the role doesn't exist in the
+database, if not enough parameters are passed, or if any of the params are
+C<undef>, an exception will be thrown.  To update a role by giving it a blank
+description, pass an empty string as the description.
 
 
 =head1 DEPENDENCIES

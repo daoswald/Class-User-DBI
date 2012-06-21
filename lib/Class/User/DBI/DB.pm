@@ -200,10 +200,10 @@ sub db_run_ex {
 
 __END__
 
-=head1 SQL and other database-related data.
 =head1 NAME
 
-Class::User::DBI - A User class: Login credentials and roles.
+Class::User::DBI::DB - An internal-use class for the various 
+C<Class::User::DBI::*> classes.
 
 =head1 VERSION
 
@@ -211,60 +211,43 @@ Version 0.01_001
 
 =head1 SYNOPSIS
 
-Through a DBIx::Connector object, this module models a "User" class, with
-login credentials, and access roles.  Login credentials include a passphrase,
-and optionally per user IP whitelisting.
-
-    # Set up a connection using DBIx::Connector:
-    # MySQL database settings:
-
-    my $conn = DBIx::Connector->new(
-        'dbi:mysql:database=cudbi_tests, 'testing_user', 'testers_pass',
-        {
-            RaiseError => 1,
-            AutoCommit => 1,
-        }
-    );
-
-
-    # Now we can play with Class::User::DBI:
-
-    Class::User::DBI->configure_db( $conn );  # Set up the tables for a user DB.
-
-    my @user_list = Class::User::DBI->list_users;
-
-    my $user = new( $conn, $userid );
-
+    my $sql = Class::User::DBI::DB::$USER_QUERY{SQL_some_query};
+    
+    db_run_ex( $connector, $sql, @parameters );
+    # or
+    db_run_ex( $connector, $sql, ( [ @params1 ], [ @params2 ] ) );
 
 
 =head1 DESCRIPTION
 
 
+This package contains all of the SQL queries for the classes in this 
+distribution.
+
+There is also one subroutine, intended for use by the classes.  It handles
+database queries through the DBIx::Connector object.
+
+
 =head1 EXPORT
 
-Nothing is exported.  There are many object methods, and three class methods,
-described in the next section.
-
+Exports (by request) hashes containing the SQL queries for each class.  By 
+default it also exports C<db_run_ex>, which is a utility function facilitating
+database queries through the connector object.
 
 =head1 SUBROUTINES/METHODS
 
 
-=head2  new
-(The constructor -- Class method.)
+=head2  db_run_ex
 
-    my $user_obj = Class::User::DBI->new( $connector, $userid );
+    db_run_ex( $connector, $sql, @parameters );
 
+    # or
 
-=head2  configure_db
-(Class method)
+    db_run_ex( $connector, $sql, ( [ @params1 ], [ @params2 ] ) );
 
-    Class::User::DBI->configure_db( $connector );
-
-This is a class method.  Pass a valid DBIx::Connector as a parameter.  Builds
-a minimal set of database tables in support of the Class::User::DBI.
-
-The tables created will be C<users>, C<user_ips>, and C<user_roles>.
-
+Pass a connector object, an SQL query, and a list of bind values.  For multiple
+C<execute()> calls, pass an array of array refs instead of a flat array.  Each
+anonymous array holds the bind values for a single C<< $sth->execute() >> call.
 
 =head1 DEPENDENCIES
 
