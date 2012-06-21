@@ -14,6 +14,7 @@ our @EXPORT_OK = qw(
   %DOM_QUERY
   %ROLE_QUERY
   %RP_QUERY
+  %UD_QUERY
   _db_run_ex
 );
 
@@ -160,6 +161,26 @@ END_SQL
       'DELETE FROM cud_roleprivs WHERE role = ? AND privilege = ?',
     SQL_list_privileges => 'SELECT privilege FROM cud_roleprivs WHERE role = ?',
 );
+
+# ----------------- Queries for Class::User::DBI::UserDomains ------------
+
+our %UD_QUERY = (
+    SQL_configure_db_cud_userdomains => << 'END_SQL',
+    CREATE TABLE IF NOT EXISTS cud_userdomains (
+        userid      VARCHAR(24)           NOT NULL DEFAULT '',
+        domain      VARCHAR(24)           NOT NULL DEFAULT '',
+        PRIMARY KEY (userid,domain)
+    )
+END_SQL
+    SQL_exists_domain =>
+      'SELECT domain FROM cud_userdomains WHERE userid = ? AND domain = ?',
+    SQL_add_domain =>
+      'INSERT INTO cud_userdomains ( userid, domain ) VALUES ( ?, ? )',
+    SQL_delete_domains =>
+      'DELETE FROM cud_userdomains WHERE userid = ? AND domain = ?',
+    SQL_list_domains => 'SELECT domain FROM cud_userdomains WHERE userid = ?',
+);
+
 
 # ------------------------------ Functions -----------------------------------
 

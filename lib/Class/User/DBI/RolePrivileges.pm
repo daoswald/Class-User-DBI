@@ -213,7 +213,7 @@ described in the next section.
 =head2  new
 (The constructor -- Class method.)
 
-    my $role_priv_obj = Class::User::DBI::Privileges->new( $connector, $role );
+    my $role_priv_obj = Class::User::DBI::RolePrivileges->new( $connector, $role );
 
 Creates a role-privileges object that can be manipulated to set and get 
 privileges for the instantiated role.  These role/privilege pairs will be stored
@@ -263,8 +263,8 @@ false if not.
 
 =head2 fetch_privileges
 
-    foreach my $rolepriv ( $rp->fetch_privileges ) {
-        print "$rolepriv->[0] = $rolepriv->[1]\n";
+    foreach my $priv ( $rp->fetch_privileges ) {
+        print "Role has $priv privilege\n";
     }
     
 Returns a list of privileges belonging to the object's target role.
