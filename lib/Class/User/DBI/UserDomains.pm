@@ -6,7 +6,7 @@ use warnings;
 
 use Carp;
 
-use Class::User::DBI::DB qw( db_run_ex  %RP_QUERY );
+use Class::User::DBI::DB qw( db_run_ex  %UD_QUERY );
 use Class::User::DBI::Domains;
 
 use Data::Dumper;
@@ -25,11 +25,12 @@ sub new {
       if !ref $conn || !$conn->isa('DBIx::Connector');
     my $self = bless {}, $class;
     $self->{_db_conn} = $conn;
-    my $u = Class::User::DBI->new( $self->_db_conn );
-    croak 'Constructor called without passing a valid user by name.'
+    croak 'Constructor called without passing a username.'
       if !defined $userid
-          || !length $userid
-          || !$u->exists_user($userid);
+          || !length $userid;
+    my $u = Class::User::DBI->new( $self->_db_conn, $userid );
+    croak 'Constructor called without passing a valid user by name.'
+      if !$u->exists_user($userid);
     $self->{userid} = $userid;
     return $self;
 }
@@ -84,7 +85,7 @@ sub has_domain {
 
 sub add_domains {
     my ( $self, @domains ) = @_;
-    my $d = Class::User::DBI::Domains->new( $self->_db_conn );
+    my $d                 = Class::User::DBI::Domains->new( $self->_db_conn );
     my @domains_to_insert = grep {
              defined $_
           && length $_
@@ -96,18 +97,17 @@ sub add_domains {
     @domains_to_insert =
       map { [ $self->get_userid, $_ ] } @domains_to_insert;
     return 0 if !scalar @domains_to_insert;
-    my $sth =
-      db_run_ex( $self->_db_conn, $UD_QUERY{SQL_add_domain},
+    my $sth = db_run_ex( $self->_db_conn, $UD_QUERY{SQL_add_domain},
         @domains_to_insert );
     return scalar @domains_to_insert;
 }
 
 # Deletes all domains in @domains (if they exist).
 # Silent if non-existent. Returns the number of roles actually deleted.
-sub delete_privileges {
+sub delete_domains {
     my ( $self, @domains ) = @_;
     my @domains_to_delete;
-    foreach my $domain (@domain) {
+    foreach my $domain (@domains) {
         next
           if !defined $domain
               || !length $domain

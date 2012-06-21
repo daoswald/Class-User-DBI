@@ -10,26 +10,26 @@ use List::MoreUtils qw( any );
 use Data::Dumper;
 
 BEGIN {
-    use_ok('Class::User::DBI::RolePrivileges');
+    use_ok('Class::User::DBI::UserDomains');
 }
 
-use Class::User::DBI::Roles;
-use Class::User::DBI::Privileges;
+use Class::User::DBI;
+use Class::User::DBI::Domains;
 
 use DBIx::Connector;
 
 can_ok(
-    'Class::User::DBI::RolePrivileges',
-    qw(  _db_conn           new             add_privileges
-      delete_privileges  has_privilege   fetch_privileges
-      get_role           configure_db
+    'Class::User::DBI::UserDomains',
+    qw(  _db_conn           new             add_domains
+      delete_domains     has_domain      fetch_domains
+      get_userid         configure_db
       )
 );
 
 # WARNING:  Tables will be dropped before and after running these tests.
 #           Only run the tests against a test database containing no data
 #           of value.
-#           cud_roles
+#           cud_userids
 #           By default, tests are run against an in-memory database. (safe)
 # YOU HAVE BEEN WARNED.
 
@@ -52,25 +52,25 @@ my $conn = DBIx::Connector->new(
     }
 );
 
-# Configure the database.  We already know that we can configure the roles
-# and privileges tables, so we'll only test the roleprivs table.
+# Configure the database.  We already know that we can configure the userids
+# and domains tables, so we'll only test the userdomains table.
 
 subtest
-  'Test Class::User::DBI::RolePrivileges->configure_db() -- Database Config.' =>
+  'Test Class::User::DBI::UserDomains->configure_db() -- Database Config.' =>
   sub {
-    dies_ok { Class::User::DBI::RolePrivileges->configure_db() }
+    dies_ok { Class::User::DBI::UserDomains->configure_db() }
     'configure_db(): dies if not passed a DBIx::Connector object.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->configure_db( bless {},
+        Class::User::DBI::UserDomains->configure_db( bless {},
             'Not::DBIx::Conn::Obj' );
     }
     'configure_db(): dies if passed a non-DBIx::Connector object.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->configure_db('DBIx::Connector');
+        Class::User::DBI::UserDomains->configure_db('DBIx::Connector');
     }
     'configure_db(): dies if passed a string instead of an object ref.';
     ok(
-        Class::User::DBI::RolePrivileges->configure_db($conn),
+        Class::User::DBI::UserDomains->configure_db($conn),
         'configure_db(): Got a good return value.'
     );
     my $sth = $conn->run(
@@ -83,136 +83,135 @@ subtest
     my $table_creation_SQL = ( $sth->fetchrow_array )[0];
     like(
         $table_creation_SQL,
-        qr/CREATE TABLE cud_roleprivs/,
+        qr/CREATE TABLE cud_userdomains/,
         'configure_db(): The correct table was created.'
     );
-    like( $table_creation_SQL, qr/role\s+VARCHAR\(\d+\)/,
-        'configure_db(): The \'role\' column was created.' );
+    like( $table_creation_SQL, qr/userid\s+VARCHAR\(\d+\)/,
+        'configure_db(): The \'userid\' column was created.' );
+    like( $table_creation_SQL, qr/domain\s+VARCHAR\(\d+\)/,
+        'configure_db(): The \'domain\' column was created.' );
     like(
         $table_creation_SQL,
-        qr/privilege\s+VARCHAR\(\d+\)/,
-        'configure_db(): The \'privilege\' column was created.'
-    );
-    like(
-        $table_creation_SQL,
-        qr/PRIMARY\s+KEY\s*\(role,privilege\)/,
+        qr/PRIMARY\s+KEY\s*\(userid,domain\)/,
         'configure_db(): The primary key was created.'
     );
     done_testing();
 
   };
 
-# Set up some temporary database tables for the Roles and Privileges classes.
-Class::User::DBI::Roles->configure_db($conn);
-Class::User::DBI::Privileges->configure_db($conn);
+# Set up some temporary database tables for the Users and Domains classes.
+Class::User::DBI->configure_db($conn);
+Class::User::DBI::Domains->configure_db($conn);
 
-# Set up some roles and privileges to test.
-my $r = Class::User::DBI::Roles->new($conn);
-$r->add_roles(
-    [ 'goofers_off', 'The group of goof-offs' ],
-    [ 'workers',     'The group that works hard' ],
-    [ 'warriers',    'The group that makes war' ],
+# Set up some userids and domains to test.
+my $d = Class::User::DBI::Domains->new($conn);
+ok(
+    $d->add_domains(
+        [ 'west',  'Wicked Witch of the West\'s domain' ],
+        [ 'east',  'Wicked Witch of the East\'s domain' ],
+        [ 'north', 'Good Witch of the North\'s domain' ],
+        [ 'south', 'Good Witch of the South\'s domain' ],
+    ),
+    'Added some domains to test.'
 );
 
-my $p = Class::User::DBI::Privileges->new($conn);
-$p->add_privileges(
-    [ 'goof_around', 'The privilege to goof around' ],
-    [ 'work',        'The privilege to work.' ],
-    [ 'party',       'The right to paarrrrr-teee' ],
-    [ 'play_hard',   'Those who work hard play hard' ],
-    [ 'make_war',    'The right to make war.' ],
+# $userinfo = { username=>...,   email=>..., ip_req=>...,
+#               ips_aref=>[...], role=>...,  password=>... };
+my $u = Class::User::DBI->new( $conn, 'testuser' );
+
+ok(
+    $u->add_user(
+        {
+            username => 'The Test User',
+            email    => 'test@email.com',
+            ip_req   => 0,
+            role     => undef,
+            password => 'testpass',
+        }
+    ),
+    'Added a test user.'
 );
+ok( $u->exists_user, 'Newly added "testuser" was created.' );
 
-subtest 'Test Class::User::DBI::RolePrivileges->new() -- Constructor.' => sub {
+subtest 'Test Class::User::DBI::UserDomains->new() -- Constructor.' => sub {
 
-    dies_ok { Class::User::DBI::RolePrivileges->new() }
+    dies_ok { Class::User::DBI::UserDomains->new() }
     'Constructor dies if not passed a DBIx::Connector object.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->new( bless {},
-            'Not::DBIx::Conn::Obj' );
+        Class::User::DBI::UserDomains->new( bless {}, 'Not::DBIx::Conn::Obj' );
     }
     'Conctructor dies if passed a non-DBIx::Connector object.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->new('DBIx::Connector');
+        Class::User::DBI::UserDomains->new('DBIx::Connector');
     }
     'Constructor dies if passed a string instead of an object ref.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->new( $conn, 'partier' );
+        Class::User::DBI::UserDomains->new( $conn, 'partier_uid' );
     }
-    'Constructor dies if passed an invalid role.';
+    'Constructor dies if passed an invalid userid.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->new($conn);
+        Class::User::DBI::UserDomains->new($conn);
     }
-    'Constructor dies if not passed a role.';
+    'Constructor dies if not passed a userid.';
     dies_ok {
-        Class::User::DBI::RolePrivileges->new( $conn, [] );
+        Class::User::DBI::UserDomains->new( $conn, [] );
     }
-    'Constructor dies if passed a reference instead of a role.';
+    'Constructor dies if passed a reference instead of a userid.';
 
-    my $rp = new_ok( 'Class::User::DBI::RolePrivileges', [ $conn, 'workers' ] );
-    isa_ok( $rp->{_db_conn}, 'DBIx::Connector',
-        'RolePrivileges object has a DBIx::Connector object attribute.' );
-    ok( exists $rp->{role}, 'RolePrivileges object has a "role" attribute.' );
+    my $ud = new_ok( 'Class::User::DBI::UserDomains', [ $conn, 'testuser' ] );
+    isa_ok( $ud->{_db_conn}, 'DBIx::Connector',
+        'UserDomains object has a DBIx::Connector object attribute.' );
+    ok( exists $ud->{userid}, 'UserDomains object has a "userid" attribute.' );
     done_testing();
 };
 
-subtest 'Test add_privileges() and has_privilege().' => sub {
-    my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
-    ok( !$rp->has_privilege('work'),
-            'has_privilege(): returns false for a privilege '
-          . 'the group doesn\t have.' );
-    dies_ok { $rp->has_privilege() }
-    'has_privilege(): throws an exception when privilege is undef.';
-    dies_ok { $rp->has_privilege(q{}) }
-    'has_privilege(): throws an exception when privilege is empty.';
-    is( $rp->add_privileges(), 0,
-        'add_priviliges(): When none are added, return value is 0.' );
-    is( $rp->add_privileges( 'work', 'play_hard' ),
-        2,
-        'add_privileges(): When two privileges are added, return value is 2.' );
-    ok( $rp->has_privilege('work'),
-        'add_privileges(): Successfully added "work" privilege.' );
-    ok( $rp->has_privilege('play_hard'),
-        'add_privileges(): Successfully added "play_hard" privilege.' );
-    is( $rp->add_privileges('tupitar'), 0,
-        'add_privileges(): Returns 0 and refuses to add an invalid privilege.'
-    );
-    ok( !$rp->has_privilege('tupitar'),
-        'add_privileges(): Didn\'t add "tupitar" (invalid privilege).' );
+subtest 'Test add_domains() and has_domain().' => sub {
+    my $ud = Class::User::DBI::UserDomains->new( $conn, 'testuser' );
+    ok( !$ud->has_domain('oz'),
+            'has_domain(): returns false for a domain '
+          . 'the user doesn\'t have.' );
+    dies_ok { $ud->has_domain() }
+    'has_domain(): throws an exception when domain is undef.';
+    dies_ok { $ud->has_domain(q{}) }
+    'has_domain(): throws an exception when domain is empty.';
+    is( $ud->add_domains(), 0,
+        'add_domains(): When none are added, return value is 0.' );
+    is( $ud->add_domains( 'east', 'west' ),
+        2, 'add_domains(): When two domains are added, return value is 2.' );
+    ok( $ud->has_domain('east'),
+        'add_domains(): Successfully added "east" domain.' );
+    ok( $ud->has_domain('west'),
+        'add_domains(): Successfully added "west" domain.' );
+    is( $ud->add_domains('tupitar'),
+        0, 'add_domains(): Returns 0 and refuses to add an invalid domain.' );
+    ok( !$ud->has_domain('tupitar'),
+        'add_domains(): Didn\'t add "tupitar" (invalid domain).' );
 
     done_testing();
 };
 
-subtest 'Test delete_privileges().' => sub {
-    my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
-    ok(
-        $rp->has_privilege('play_hard'),
-        'has_privilege(): verifies a privilege.'
-    );
-    is( $rp->delete_privileges('play_hard'),
-        1, 'delete_privilege(): Good return value for delete.' );
-    ok(
-        !$rp->has_privilege('play_hard'),
-        'delete_privilege(): Delete confirmed.'
-    );
-    is( $rp->delete_privileges('play_hard'),
-        0, 'delete_privilege(): Refuses to delete a non-role privilege.' );
+subtest 'Test delete_domains().' => sub {
+    my $ud = Class::User::DBI::UserDomains->new( $conn, 'testuser' );
+    ok( $ud->has_domain('east'), 'has_domain(): verifies a domain.' );
+    is( $ud->delete_domains('east'),
+        1, 'delete_domain(): Good return value for delete.' );
+    ok( !$ud->has_domain('east'), 'delete_domain(): Delete confirmed.' );
+    is( $ud->delete_domains('east'),
+        0, 'delete_domain(): Refuses to delete a non-userid domain.' );
     done_testing();
 };
 
-subtest 'Test fetch_privileges().' => sub {
-    my $rp = Class::User::DBI::RolePrivileges->new( $conn, 'workers' );
-    is( scalar $rp->fetch_privileges,
-        1, 'fetch_privileges(): Found one privilege.' );
-    $rp->add_privileges( 'play_hard', 'make_war', 'party' );
-    my @privs = $rp->fetch_privileges;
-    is( scalar @privs, 4, 'fetch_privileges(): Found four privileges.' );
-    ok( ( any { $_ eq 'make_war' } @privs ),
-        'fetch_privileges(): Identified a valid privilege.' );
-    $rp->delete_privileges( 'play_hard', 'make_war', 'party', 'work' );
-    @privs = $rp->fetch_privileges;
-    is( scalar @privs,
-        0, 'fetch_privileges(): Returns empty list if no privs.' );
+subtest 'Test fetch_domains().' => sub {
+    my $ud = Class::User::DBI::UserDomains->new( $conn, 'testuser' );
+    is( scalar $ud->fetch_domains, 1, 'fetch_domains(): Found one domain.' );
+    $ud->add_domains( 'play_hard', 'make_war', 'party' );
+    my @doms = $ud->fetch_domains;
+    is( scalar @doms, 1, 'fetch_domains(): Found one domain.' );
+    ok( ( any { $_ eq 'west' } @doms ),
+        'fetch_domains(): Identified a valid domain.' );
+    $ud->delete_domains( 'north', 'south', 'east', 'west' );
+    @doms = $ud->fetch_domains;
+    is( scalar @doms, 0, 'fetch_domains(): Returns empty list if no privs.' );
     done_testing();
 };
 

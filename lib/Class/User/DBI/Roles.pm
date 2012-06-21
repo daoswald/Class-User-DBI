@@ -123,8 +123,7 @@ sub set_role_description {
       if !$self->exists_role($role);
     croak 'Must specify a description (q{} is ok too).'
       if !defined $description;
-    my $sth =
-      db_run_ex( $self->_db_conn, $ROLE_QUERY{SQL_set_role_description},
+    my $sth = db_run_ex( $self->_db_conn, $ROLE_QUERY{SQL_set_role_description},
         $description, $role );
     return 1;
 }

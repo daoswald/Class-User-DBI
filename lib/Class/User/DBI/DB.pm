@@ -38,18 +38,17 @@ our %USER_QUERY = (
       . 'username, email, role, domain ) VALUES( ?, ?, ?, ?, ?, ?, ?, ? )',
     SQL_delete_user     => 'DELETE FROM users WHERE userid = ?',
     SQL_delete_user_ips => 'DELETE FROM user_ips WHERE userid = ?',
-    SQL_set_email    => 'UPDATE users SET email = ? WHERE userid = ?',
-    SQL_set_username => 'UPDATE users SET username = ? WHERE userid = ?',
-    SQL_set_domain   => 'UPDATE users SET domain = ? WHERE userid = ?',
+    SQL_set_email       => 'UPDATE users SET email = ? WHERE userid = ?',
+    SQL_set_username    => 'UPDATE users SET username = ? WHERE userid = ?',
+    SQL_set_domain      => 'UPDATE users SET domain = ? WHERE userid = ?',
     SQL_update_password =>
       'UPDATE users SET salt = ?, password = ? WHERE userid = ?',
-    SQL_list_users  => 'SELECT userid, username, email FROM users',
-    SQL_get_role    => 'SELECT role FROM users WHERE userid = ?',
-    SQL_is_role     => 'SELECT role FROM users WHERE userid = ? AND role = ?',
-    SQL_set_role => 'UPDATE users SET role = ? WHERE userid = ?',
-    SQL_get_domain  => 'SELECT domain FROM users WHERE userid = ?',
-    SQL_is_domain  => 
-        'SELECT domain FROM users WHERE userid = ? AND domain = ?',
+    SQL_list_users => 'SELECT userid, username, email FROM users',
+    SQL_get_role   => 'SELECT role FROM users WHERE userid = ?',
+    SQL_is_role    => 'SELECT role FROM users WHERE userid = ? AND role = ?',
+    SQL_set_role   => 'UPDATE users SET role = ? WHERE userid = ?',
+    SQL_get_domain => 'SELECT domain FROM users WHERE userid = ?',
+    SQL_is_domain => 'SELECT domain FROM users WHERE userid = ? AND domain = ?',
     SQL_configure_db_users => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS users (
         userid      VARCHAR(24)           NOT NULL DEFAULT '',
@@ -180,7 +179,6 @@ END_SQL
       'DELETE FROM cud_userdomains WHERE userid = ? AND domain = ?',
     SQL_list_domains => 'SELECT domain FROM cud_userdomains WHERE userid = ?',
 );
-
 
 # ------------------------------ Functions -----------------------------------
 

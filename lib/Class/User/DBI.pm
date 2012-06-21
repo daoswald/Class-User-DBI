@@ -233,6 +233,8 @@ sub delete_ips {
     return scalar @ips_for_deletion;    # Return a count of IP's deleted.
 }
 
+# $userinfo = { username=>...,   email=>..., ip_req=>...,
+#               ips_aref=>[...], role=>...,  password=>... };
 sub add_user {
     my ( $self, $userinfo ) = @_;
     my $password = $userinfo->{password};
