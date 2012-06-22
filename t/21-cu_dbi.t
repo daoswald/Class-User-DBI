@@ -53,10 +53,9 @@ subtest 'Class::User::DBI use and can tests.' => sub {
         'Class::User::DBI', qw(
           _db_conn          _db_run         add_ips         add_user
           configure_db      delete_ips      delete_user     exists_user
-          fetch_credentials fetch_valid_ips get_domain      get_privileges
-          get_role          has_privilege   is_domain       is_role
+          get_credentials get_valid_ips get_role        is_role
           list_users        load_profile    new             set_role
-          set_domain        set_email       update_password set_username
+          set_email         update_password set_username
           userid            validate        validated
           )
     );
@@ -105,31 +104,31 @@ subtest "Tests for $appuser" => sub {
     my $query_handle = $user->_db_run( 'SELECT * FROM users', () );
     isa_ok( $query_handle, 'DBI::st', '_db_run():  ' );
 
-    my $rv = $user->fetch_credentials();
+    my $rv = $user->get_credentials();
 
-    is( ref($rv), 'HASH', 'fetch_credentials():   Returns a hashref.' );
+    is( ref($rv), 'HASH', 'get_credentials():   Returns a hashref.' );
     ok( exists( $rv->{valid_ips} ),
-        'fetch_credentials():   valid_ips   field found.' );
+        'get_credentials():   valid_ips   field found.' );
     ok( exists( $rv->{ip_required} ),
-        'fetch_credentials():   ip_required field found.' );
+        'get_credentials():   ip_required field found.' );
     ok( exists( $rv->{salt_hex} ),
-        'fetch_credentials():   salt_hex    field found.' );
+        'get_credentials():   salt_hex    field found.' );
     ok( exists( $rv->{pass_hex} ),
-        'fetch_credentials():  pass_hex    field found.' );
+        'get_credentials():  pass_hex    field found.' );
     ok( exists( $rv->{userid} ),
-        'fetch_credentials():  userid    field found.' );
+        'get_credentials():  userid    field found.' );
     is( $rv->{userid}, $appuser,
-        'fetch_credentials():  Correct userid found.' );
+        'get_credentials():  Correct userid found.' );
     is( ref( $rv->{valid_ips} ),
-        'ARRAY', 'fetch_credentials():  valid_ips contains aref.' );
+        'ARRAY', 'get_credentials():  valid_ips contains aref.' );
     is( $rv->{ip_required} == 0 || $rv->{ip_required} == 1,
-        1, 'fetch_credentials():  ip_required is a Boolean value.' );
+        1, 'get_credentials():  ip_required is a Boolean value.' );
     like( $rv->{salt_hex}, qr/^[[:xdigit:]]{128}$/x,
-        'fetch_credentials():  salt_hex has 128 hex digits.' );
+        'get_credentials():  salt_hex has 128 hex digits.' );
     like( $rv->{pass_hex}, qr/^[[:xdigit:]]{128}$/x,
-        'fetch_credentials():  pass_hex has 128 hex digits.' );
-    is( scalar( $user->fetch_valid_ips ),
-        0, "fetch_valid_ips():  $appuser has no IP's." );
+        'get_credentials():  pass_hex has 128 hex digits.' );
+    is( scalar( $user->get_valid_ips ),
+        0, "get_valid_ips():  $appuser has no IP's." );
     is( $user->exists_user, 1, "exists_user(): $appuser exists in DB." );
     is( $user->validate('wrong pass'),
         0, 'validate: Reject incorrect password with 0.' );
@@ -173,8 +172,8 @@ subtest "Tests for $appuser_ip_req." => sub {
         );
     }
     isa_ok( $user, 'Class::User::DBI', 'new():         ' );
-    is( grep( { $_ eq $test_ip } $user->fetch_valid_ips ),
-        1, 'fetch_valid_ips(): Found a known IP in the DB.' );
+    is( grep( { $_ eq $test_ip } $user->get_valid_ips ),
+        1, 'get_valid_ips(): Found a known IP in the DB.' );
     is( $user->validate($appuser_pass),
         0, 'validate(): Reject user requiring IP if no IP is supplied.' );
     is( $user->validate( $appuser_pass, '127.0.0.1' ),
@@ -188,19 +187,19 @@ subtest "Tests for $appuser_ip_req." => sub {
     is( $user->validate( $appuser_pass, $test_ip ),
         1, 'validate(): Accept user if correct password and correct IP.' );
 
-    my (@found) = grep { $_ eq $test_ip2 } $user->fetch_valid_ips();
+    my (@found) = grep { $_ eq $test_ip2 } $user->get_valid_ips();
 
     if (@found) {
         $user->delete_ips(@found);
     }
 
-    is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
+    is( grep( { $_ eq $test_ip2 } $user->get_valid_ips() ),
         0, "add_ips() test:  Initial state: $test_ip2 not in database." );
     $user->add_ips($test_ip2);
-    is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
+    is( grep( { $_ eq $test_ip2 } $user->get_valid_ips() ),
         1, "add_ips() test:  $test_ip2 successfully added." );
     $user->delete_ips($test_ip2);
-    is( grep( { $_ eq $test_ip2 } $user->fetch_valid_ips() ),
+    is( grep( { $_ eq $test_ip2 } $user->get_valid_ips() ),
         0, "delete_ips():    $test_ip2 successfully deleted." );
 
     done_testing();
@@ -230,7 +229,7 @@ subtest 'add_user() tests.' => sub {
     is( $user->validate( 'Super Me!', '192.168.0.100' ),
         1, 'New user validates.' );
     is( $user->delete_user, 1, 'delete_user(): Returns truth for success.' );
-    is( scalar $user->fetch_valid_ips,
+    is( scalar $user->get_valid_ips,
         0, 'delete_user(): All IPs deleted for deleted user.' );
     is( $user->exists_user, 0,
         'exists_user(): Deleted user no longer exists in DB.' );
@@ -302,22 +301,6 @@ subtest 'list_users() tests.' => sub {
     done_testing();
 };
 
-subtest 'Test domain code.' => sub {
-    Class::User::DBI::Domains->configure_db($conn);
-    my $d = new_ok( 'Class::User::DBI::Domains', [$conn] );
-    ok( $d->add_domains( [ 'test_domain', 'This user lives in testland.' ] ),
-        'Got a good return value from add_domains().' );
-    ok( $d->exists_domain('test_domain'), 'Added a test domain.' );
-    my $u = Class::User::DBI->new( $conn, $appuser );
-    ok( !$u->is_domain('test_domain'),
-        'is_domain(): Properly detects improper (or no) domain.' );
-    ok( $u->set_domain('test_domain'),
-        'Got a good return value from set_domain().' );
-    ok( $u->is_domain('test_domain'),
-        'add_domain(): Correctly added the domain.  is_domain() found it.' );
-    is( $u->get_domain, 'test_domain', 'The proper domain was set.' );
-    done_testing();
-};
 
 subtest 'Test role code.' => sub {
     ok( Class::User::DBI::Roles->configure_db($conn),
@@ -333,31 +316,6 @@ subtest 'Test role code.' => sub {
     ok( $u->is_role('test_role'),
         'add_role(): Correctly added the role.  is_role() found it.' );
     is( $u->get_role, 'test_role', 'The proper role was set.' );
-    done_testing();
-};
-
-subtest 'Test role priviliges code.' => sub {
-    ok( Class::User::DBI::Privileges->configure_db($conn),
-        'Privileges table configured.' );
-    my $p = new_ok( 'Class::User::DBI::Privileges', [$conn] );
-    $p->add_privileges( [ 'work', 'The privilege to work.' ] );
-    ok( Class::User::DBI::RolePrivileges->configure_db($conn),
-        'RolePrivileges table configured.' );
-    my $rp =
-      new_ok( 'Class::User::DBI::RolePrivileges', [ $conn, 'test_role' ] );
-    ok( $rp->add_privileges('work'),
-        'Added a "work" privilege to "test_role".' );
-    my $u = Class::User::DBI->new( $conn, $appuser );
-    ok( $u->is_role('test_role'), 'User is a "test_role"' );
-    ok( $u->has_privilege('work'),
-        'has_privilege(): User has "work" privilege.' );
-    ok( $u->get_privileges,
-        'get_privileges(): Got a successful return value.' );
-    ok(
-        ( any { $_ eq 'work' } $u->get_privileges ),
-        'get_privileges(): Found the "work" privilege.'
-    );
-
     done_testing();
 };
 

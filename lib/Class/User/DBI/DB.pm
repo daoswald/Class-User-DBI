@@ -26,29 +26,26 @@ $VERSION = eval $VERSION;    ## no critic (eval)
 # ---------------- SQL queries for Class::User::DBI --------------------------
 
 our %USER_QUERY = (
-    SQL_fetch_valid_ips   => 'SELECT ip FROM user_ips WHERE userid = ?',
-    SQL_fetch_credentials => 'SELECT salt, password, ip_required, role, domain '
+    SQL_get_valid_ips   => 'SELECT ip FROM user_ips WHERE userid = ?',
+    SQL_get_credentials => 'SELECT salt, password, ip_required, role '
       . 'FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
     SQL_load_profile =>
-'SELECT userid, username, email, role, domain FROM users WHERE userid = ?',
+'SELECT userid, username, email, role FROM users WHERE userid = ?',
     SQL_add_ips    => 'INSERT INTO user_ips ( userid, ip ) VALUES( ?, ? )',
     SQL_delete_ips => 'DELETE FROM user_ips WHERE userid = ? AND ip = ?',
     SQL_add_user => 'INSERT INTO users ( userid, salt, password, ip_required, '
-      . 'username, email, role, domain ) VALUES( ?, ?, ?, ?, ?, ?, ?, ? )',
+      . 'username, email, role ) VALUES( ?, ?, ?, ?, ?, ?, ? )',
     SQL_delete_user     => 'DELETE FROM users WHERE userid = ?',
     SQL_delete_user_ips => 'DELETE FROM user_ips WHERE userid = ?',
     SQL_set_email       => 'UPDATE users SET email = ? WHERE userid = ?',
     SQL_set_username    => 'UPDATE users SET username = ? WHERE userid = ?',
-    SQL_set_domain      => 'UPDATE users SET domain = ? WHERE userid = ?',
     SQL_update_password =>
       'UPDATE users SET salt = ?, password = ? WHERE userid = ?',
     SQL_list_users => 'SELECT userid, username, email FROM users',
     SQL_get_role   => 'SELECT role FROM users WHERE userid = ?',
     SQL_is_role    => 'SELECT role FROM users WHERE userid = ? AND role = ?',
     SQL_set_role   => 'UPDATE users SET role = ? WHERE userid = ?',
-    SQL_get_domain => 'SELECT domain FROM users WHERE userid = ?',
-    SQL_is_domain => 'SELECT domain FROM users WHERE userid = ? AND domain = ?',
     SQL_configure_db_users => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS users (
         userid      VARCHAR(24)           NOT NULL DEFAULT '',
@@ -58,7 +55,6 @@ our %USER_QUERY = (
         username    VARCHAR(40)           DEFAULT NULL,
         email       VARCHAR(320)          DEFAULT NULL,
         role        VARCHAR(24)           DEFAULT NULL,
-        domain      VARCHAR(24)           DEFAULT NULL,
         PRIMARY KEY( userid )
     )
 END_SQL
