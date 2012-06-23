@@ -20,18 +20,18 @@ our @EXPORT_OK = qw(
 
 use Carp;
 
-our $VERSION = '0.01_003';
-$VERSION = eval $VERSION;    ## no critic (eval)
+our $VERSION = '0.02';
+# $VERSION = eval $VERSION;    ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
 
 our %USER_QUERY = (
     SQL_get_valid_ips   => 'SELECT ip FROM user_ips WHERE userid = ?',
-    SQL_get_credentials => 'SELECT salt, password, ip_required, role '
+    SQL_get_credentials => 'SELECT salt, password, ip_required '
       . 'FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
     SQL_load_profile =>
-'SELECT userid, username, email, role FROM users WHERE userid = ?',
+      'SELECT userid, username, email, role FROM users WHERE userid = ?',
     SQL_add_ips    => 'INSERT INTO user_ips ( userid, ip ) VALUES( ?, ? )',
     SQL_delete_ips => 'DELETE FROM user_ips WHERE userid = ? AND ip = ?',
     SQL_add_user => 'INSERT INTO users ( userid, salt, password, ip_required, '
@@ -222,7 +222,7 @@ C<Class::User::DBI::*> classes.
 
 =head1 VERSION
 
-Version 0.01_001
+Version 0.02
 
 =head1 SYNOPSIS
 

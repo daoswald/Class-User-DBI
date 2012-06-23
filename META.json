@@ -1,10 +1,10 @@
 {
-   "abstract" : "A User class: Login credentials and roles.",
+   "abstract" : "A User class: Login credentials, roles, privileges, domains.",
    "author" : [
       "David Oswald <davido [@at] cpan [d.o.t] org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.6302, CPAN::Meta::Converter version 2.120630",
+   "generated_by" : "ExtUtils::MakeMaker version 6.62, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -23,6 +23,9 @@
       "build" : {
          "requires" : {
             "DBD::SQLite" : "0",
+            "DBIx::Connector" : "0",
+            "List::MoreUtils" : "0",
+            "Test::Exception" : "0",
             "Test::More" : "0.98"
          }
       },
@@ -39,6 +42,36 @@
             "Test::More" : "0",
             "perl" : "5.008000"
          }
+      }
+   },
+   "provides" : {
+      "Class::User::DBI" : {
+         "file" : "lib/Class/User/DBI.pm",
+         "version" : "0.02"
+      },
+      "Class::User::DBI::DB" : {
+         "file" : "lib/Class/User/DBI/DB.pm",
+         "version" : "0.02"
+      },
+      "Class::User::DBI::Domains" : {
+         "file" : "lib/Class/User/DBI/Domains.pm",
+         "version" : "0.02"
+      },
+      "Class::User::DBI::Privileges" : {
+         "file" : "lib/Class/User/DBI/Privileges.pm",
+         "version" : "0.02"
+      },
+      "Class::User::DBI::RolePrivilegess" : {
+         "file" : "lib/Class/User/DBI/RolePrivileges.pm",
+         "version" : "0.02"
+      },
+      "Class::User::DBI::Roles" : {
+         "file" : "lib/Class/User/DBI/Roles.pm",
+         "version" : "0.02"
+      },
+      "Class::User::DBI::UserDomains" : {
+         "file" : "lib/Class/User/DBI/UserDomains.pm",
+         "version" : "0.02"
       }
    },
    "release_status" : "stable",

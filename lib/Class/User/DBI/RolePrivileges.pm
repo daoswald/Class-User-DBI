@@ -12,8 +12,8 @@ use Class::User::DBI::Privileges;
 
 use Data::Dumper;
 
-our $VERSION = '0.01_003';
-$VERSION = eval $VERSION;    ## no critic (eval)
+our $VERSION = '0.02';
+# $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Table is role, privilege.
 # Table allows duplicate roles, but not duplicate role/priv.
@@ -142,11 +142,11 @@ __END__
 
 =head1 NAME
 
-Class::User::DBI::Privileges - A user roles and privileges class.
+Class::User::DBI::RolePrivileges - A user roles and privileges class.
 
 =head1 VERSION
 
-Version 0.01_001
+Version 0.02
 
 =head1 SYNOPSIS
 

@@ -79,7 +79,7 @@ $conn->run(
 );
 
 Class::User::DBI->configure_db($conn);
-
+Class::User::DBI::UserDomains->configure_db($conn);
 subtest "Tests for $appuser" => sub {
 
     my $user = Class::User::DBI->new( $conn, $appuser );
@@ -115,10 +115,8 @@ subtest "Tests for $appuser" => sub {
         'get_credentials():   salt_hex    field found.' );
     ok( exists( $rv->{pass_hex} ),
         'get_credentials():  pass_hex    field found.' );
-    ok( exists( $rv->{userid} ),
-        'get_credentials():  userid    field found.' );
-    is( $rv->{userid}, $appuser,
-        'get_credentials():  Correct userid found.' );
+    ok( exists( $rv->{userid} ), 'get_credentials():  userid    field found.' );
+    is( $rv->{userid}, $appuser, 'get_credentials():  Correct userid found.' );
     is( ref( $rv->{valid_ips} ),
         'ARRAY', 'get_credentials():  valid_ips contains aref.' );
     is( $rv->{ip_required} == 0 || $rv->{ip_required} == 1,
@@ -300,7 +298,6 @@ subtest 'list_users() tests.' => sub {
     is( scalar @users > 1, 1, 'Found more than one user.' );
     done_testing();
 };
-
 
 subtest 'Test role code.' => sub {
     ok( Class::User::DBI::Roles->configure_db($conn),

@@ -30,24 +30,33 @@ WriteMakefile(
         provides => {
             'Class::User::DBI' => {
                 file    => 'lib/Class/User/DBI.pm',
-                version => '0.01_002',
+                version => '0.02',
             },
             'Class::User::DBI::DB' => {
                 file    => 'lib/Class/User/DBI/DB.pm',
-                version => '0.01_002',
+                version => '0.02',
             },
             'Class::User::DBI::Privileges' => {
                 file    => 'lib/Class/User/DBI/Privileges.pm',
-                version => '0.01_002',
+                version => '0.02',
             },
             'Class::User::DBI::Domains' => {
                 file    => 'lib/Class/User/DBI/Domains.pm',
-                version => '0.01_002',
+                version => '0.02',
             },
             'Class::User::DBI::Roles' => {
-                file    => 'lib/Class/User/DBI/Domains.pm',
-                version => '0.01_002',
+                file    => 'lib/Class/User/DBI/Roles.pm',
+                version => '0.02',
             },
+            'Class::User::DBI::RolePrivilegess' => {
+                file    => 'lib/Class/User/DBI/RolePrivileges.pm',
+                version => '0.02',
+            },
+            'Class::User::DBI::UserDomains' => {
+                file    => 'lib/Class/User/DBI/UserDomains.pm',
+                version => '0.02',
+            },
+            
         },
         version   => '0.02',
         resources => {

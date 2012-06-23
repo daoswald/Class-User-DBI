@@ -11,8 +11,8 @@ use Class::User::DBI::Domains;
 
 use Data::Dumper;
 
-our $VERSION = '0.01_003';
-$VERSION = eval $VERSION;    ## no critic (eval)
+our $VERSION = '0.02';
+# $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Table is role, privilege.
 # Table allows duplicate roles, but not duplicate role/priv.
@@ -120,7 +120,7 @@ sub delete_domains {
     return scalar @domains_to_delete;
 }
 
-# Returns a list of priviliges for this object's role.
+# Returns a list of priviliges for this object's target user.
 sub fetch_domains {
     my $self = shift;
     my $sth  = db_run_ex( $self->_db_conn, $UD_QUERY{SQL_list_domains},
@@ -138,11 +138,11 @@ __END__
 
 =head1 NAME
 
-Class::User::DBI::Privileges - A user user domains class.
+Class::User::DBI::UserDomains - A user user domains class.
 
 =head1 VERSION
 
-Version 0.01_001
+Version 0.02
 
 =head1 SYNOPSIS
 

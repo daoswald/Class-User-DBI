@@ -17,7 +17,10 @@ use Authen::Passphrase::SaltedSHA512;
 use Class::User::DBI::DB qw( %USER_QUERY db_run_ex );
 use Class::User::DBI::Roles;
 
-our $VERSION = '0.01_002';
+use Class::User::DBI::RolePrivileges;
+use Class::User::DBI::UserDomains;
+
+our $VERSION = '0.02';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -36,12 +39,10 @@ sub new {
 
 # Accessors.
 
-
 sub _db_conn {
     my $self = shift;
     return $self->{_db_conn};
 }
-
 
 # Prepares and executes a database command using DBIx::Connector's 'run'
 # method.  Pass bind values as 2nd+ parameter(s).  If the first bind-value
@@ -61,14 +62,10 @@ sub _db_run {
     return db_run_ex( $conn, $sql, @ex_params );
 }
 
-
-
 sub userid {
     my $self = shift;
     return $self->{userid};
 }
-
-
 
 # $userinfo = { username=>...,   email=>..., ip_req=>...,
 #               ips_aref=>[...], role=>...,  password=>... };
@@ -77,7 +74,7 @@ sub add_user {
     my $password = $userinfo->{password};
     croak 'Cannot create a user without a password.'
       if !defined $password || !length $password;
-    return if $self->exists_user;       # Don't add a user already in the DB.
+    return if $self->exists_user;    # Don't add a user already in the DB.
 
     # Default to IP not required.
     my $ip_req   = defined $userinfo->{ip_req}   ? $userinfo->{ip_req}   : 0;
@@ -102,46 +99,56 @@ sub add_user {
             $sth->execute( $self->userid, $salt_hex, $hash_hex, $ip_req,
                 $username, $email, $role );
             $self->add_ips( @{$ips_aref} ) if ref($ips_aref) eq 'ARRAY';
+            if ( exists $userinfo->{domains}
+                && ref $userinfo->{domains} eq 'ARRAY' )
+            {
+                $self->user_domains->add_domains( @{ $userinfo->{domains} } );
+            }
         }
     );
     return $self->{exists_user} = $self->userid;
 }
 
-
 sub delete_user {
     my $self = shift;
     return if !$self->exists_user;    # undef if user wasn't in the DB.
+
     $self->_db_conn->txn(
         fixup => sub {
+
+            # Fetch the ud object before we delete user from users database.
+            # Otherwise, the ud constructor will fail a validity check.
+            my $ud  = $self->user_domains;
             my $sth = $_->prepare( $USER_QUERY{SQL_delete_user} );
             $sth->execute( $self->userid );
             my $sth2 = $_->prepare( $USER_QUERY{SQL_delete_user_ips} );
             $sth2->execute( $self->userid );
+            if ( my @domains = $ud->fetch_domains ) {
+                $ud->delete_domains(@domains);    # Transactions are great!
+            }
         }
     );
-    $self->validated(0);    # Invalidate the deleted user, just in case it was
-                            # also the current user.
-    $self->{exists_user} = 0;    # Invalidate the exists_user cache.
+
+    # Invalidate the caches.
+    $self->validated(0);
+    $self->{exists_user} = 0;
     return 1;
 }
 
-
-# Quick check whether a userid exists in the database.
-# Return 0 if user doesn't exist.
+# Quick check whether a userid exists inf the database.
+# Return 0 if user doesn't exist.  Caches result.
 sub exists_user {
     my $self = shift;
-    return 1 if $self->{exists_user};    # Only query if we have to.
+    return 1 if $self->{exists_user};
     my $sth = $self->_db_run( $USER_QUERY{SQL_exists_user}, $self->userid );
     return defined $sth->fetchrow_array ? 1 : 0;
 }
 
-
 # Fetch user's salt_hex, pass_hex, ip_required, and valid ip's from database.
 sub get_credentials {
     my $self = shift;
-    my $sth =
-      $self->_db_run( $USER_QUERY{SQL_get_credentials}, $self->userid );
-    my ( $salt_hex, $pass_hex, $ip_required, $role ) = $sth->fetchrow_array;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_get_credentials}, $self->userid );
+    my ( $salt_hex, $pass_hex, $ip_required ) = $sth->fetchrow_array;
     return if not defined $salt_hex;    # User wasn't found.
     my @valid_ips = $self->get_valid_ips;
     return {
@@ -150,10 +157,8 @@ sub get_credentials {
         pass_hex    => $pass_hex,
         ip_required => $ip_required,
         valid_ips   => [@valid_ips],
-        role        => $role
     };
 }
-
 
 # Validate returns 0 or 1.
 # 0 for any of the following conditions:
@@ -177,7 +182,6 @@ sub validate {
         hash_hex => $credentials->{pass_hex}
     );
 
-    # Return false if password doesn't match.
     if ( !$auth->match($password) ) {
         $self->validated(0);
         return 0;
@@ -209,18 +213,19 @@ sub validated {
     return $self->{validated};
 }
 
-
-
-
 # May be useful later on if we add user information.
 sub load_profile {
     my $self = shift;
     my $sth  = $self->_db_run( $USER_QUERY{SQL_load_profile}, $self->userid );
     my $hr   = $sth->fetchrow_hashref;
+    if ( $self->get_role ) {
+        my $rp = $self->role_privileges;
+        $hr->{privileges} = [ $rp->fetch_privileges ];
+    }
+    my $ud = $self->user_domains;
+    $hr->{domains} = [ $ud->fetch_domains ];
     return $hr;
 }
-
-
 
 sub add_ips {
     my ( $self, @ips ) = @_;
@@ -268,7 +273,6 @@ sub get_valid_ips {
     }
     return @rv;
 }
-
 
 sub update_password {
     my ( $self, $newpass, $oldpass ) = @_;
@@ -318,11 +322,6 @@ sub set_username {
     return 1;
 }
 
-
-
-
-
-
 sub get_role {
     my $self = shift;
     return if !$self->exists_user;
@@ -330,7 +329,6 @@ sub get_role {
     my $role = ( $sth->fetchrow_array )[0];
     return $role;
 }
-
 
 sub set_role {
     my ( $self, $role ) = @_;
@@ -351,26 +349,26 @@ sub is_role {
     return 0;
 }
 
-sub get_role_privileges_object {
+sub role_privileges {
     my $self = shift;
     return $self->{role_privileges_obj}
       if exists $self->{role_privileges_obj};
     $self->{role_privileges_obj} =
       Class::User::DBI::RolePrivileges->new( $self->_db_conn, $self->get_role );
     croak 'Couldn\'t instantiate a Class::User::DBI::RolePrivileges object.'
-      if $self->{role_privileges_obj}->isa ne
+      if ref( $self->{role_privileges_obj} ) ne
           'Class::User::DBI::RolePrivileges';
     return $self->{role_privileges_obj};
 }
 
-sub get_user_domains_object {
+sub user_domains {
     my $self = shift;
     return $self->{user_domains_obj}
       if exists $self->{user_domains_obj};
     $self->{user_domains_obj} =
       Class::User::DBI::UserDomains->new( $self->_db_conn, $self->userid );
     croak 'Couldn\'t instantiate a Class::User::DBI::UserDomains object.'
-      if $self->{user_domains_obj}->isa ne 'Class::User::DBI::UserDomains';
+      if ref( $self->{user_domains_obj} ) ne 'Class::User::DBI::UserDomains';
     return $self->{user_domains_obj};
 }
 
@@ -409,7 +407,7 @@ Class::User::DBI - A User class: Login credentials, roles, privileges, domains.
 
 =head1 VERSION
 
-Version 0.01_001
+Version 0.02
 
 =head1 SYNOPSIS
 
@@ -476,8 +474,8 @@ act independently, allowing for sophisticated access control.
     my $success     = $user->set_role( $role );
     my $has         = $user->is_role( $role );
     my $role        = $user->get_role;
-    my $rp          = $user->get_role_privileges_object;
-    my $ud          = $user->get_user_domains_object;
+    my $rp          = $user->role_privileges;
+    my $ud          = $user->user_domains;
 
 
 =head1 DESCRIPTION
@@ -547,7 +545,7 @@ C<< $user->get_role_privilege_object >> to verify that a user has a given access
 privilege.
 
 Use the L<Class::User::DBI::UserDomains> object obtained via a call to
-C<< $user->get_user_domains_object >> to verify that a user has a given
+C<< $user->user_domains >> to verify that a user has a given
 domain/jurisdiction/locality.
 
 =head1 SUBROUTINES/METHODS
@@ -625,6 +623,7 @@ Returns a count of how many were added.
             '192.168.0.1',                  # list is provided here, then valid
         ],                                  # IP's will need to be added later
                                             # before user can validate.
+        role        => $role,               # A string representing user's role.
     } );
 
 This method creates a new user in the database with the C<userid> supplied when
@@ -653,12 +652,13 @@ in side-stepping user validation, as they cannot be used to decrypt the
 passphrase.  SHA512 is the strongest of the SHA2 family.  A salt length of
 512 bits guarantees a maximum entropy for any given passphrase.
 
-Though it is beyond the scope of this module to do so, users should be
+Though it is beyond the scope of this module to enforce, users should be
 encouraged to use passphrases that are both resistant to dictionary attacks, and
 dissimilar to passphrases used in other applications.  No minimum passphrase
 size is enforced by this module.  But a strong passphrase should be of ample
 length, and should contain characters beyond the standard alphabet.
 
+Users may also be assigned a role that will be used in RBAC.
 
 =head2  delete_ips
 
@@ -675,8 +675,8 @@ Returns a count of how many IP's were dropped.
     $user->delete_user;
 
 Removes the user from the database, along with the user's IP whitelist, and
-roles.  Also sets the C<< $user->validated >>, and C<< $user->exists_user >>
-flags to false.
+any associated domains.  Also sets the C<< $user->validated >>, and
+C<< $user->exists_user >> flags to false.
 
 
 =head2  exists_user
@@ -717,7 +717,7 @@ describes the user's credentials.  The structure looks like this:
                                     # user requires IP whitelist validation.
 
         valid_ips   => [            # Whitelisted IP's for user. (optional)
-            '127.0.0.1',                # Some example whitelisted IP's.
+            '127.0.0.1',            # Some example whitelisted IP's.
             '129.168.0.10',
         ],
     };
@@ -732,50 +732,63 @@ C<get_credentials()> method exists.
 
 =head2 get_role
 
+    my $user_role = $user->get_role;
 
-=head2 get_role_privileges_object
+Returns the user's assigned role.  If no role is assigned, returns an empty
+string.
 
+=head2 role_privileges
 
-=head2 get_user_domains_object
+Returns a Class::User::DBI::RolePrivileges object associated with this user's
+role.  See L<Class::User::DBI::RolePrivileges> to read how to manipulate the
+object.
 
+=head2 user_domains
+
+Returns a Class::User::DBI::UserDomains object associated with this user.  See
+L<Class::User::DBI::UserDomains> to read how to manipulate the object.
 
 =head2  get_valid_ips
 
     my @valid_ips = $user->get_valid_ips;
 
-Returns a list containing the list of whitelisted IP's for this user.  Each
+Returns a list containing the whitelisted IP's for this user.  Each
 IP will be a string in the form of C<192.168.0.198>.  If the user doesn't use
 IP validation, or there are no IP's stored for this user, the list will be
 empty.
 
 =head2 is_role
 
+    my $is = $user->is_role( 'worker' );
+    
+Returns true if this user's role matches the parameter.
 
 =head2  load_profile
 
     my $user_info_href = $user->load_profile;
-    foreach my $field ( qw/ userid username email / ) {
+    foreach my $field ( qw/ userid username email role / ) {
         print "$field   => $user_info_href->{$field}\n";
     }
 
 Returns a reference to an anonymous hash containing the user's basic
-profile information.  Currently the datastructure looks like this:
+profile and RBAC information.  The datastructure looks like this:
 
     my $user_info_href = {
         userid      => $userid,     # The primary user ID.
         username    => $username,   # The full user name as stored in the DB.
         email       => $email,      # The email stored in the DB for this user.
+        role        => $role,       # The user's assigned role (may be blank).
+        privileges  => [ @privs ],  # A reference to an array of user's privs.
+        domains     => [ @doms  ],  # A reference to an array of user's domains.
     };
 
-Although additional fields could be added to the database table and this
-module could be subclassed to process those fields, it's probably easier to
-just add another table keyed off of the unique C<userid> field, containing
-any additional information a given application requires for a user.
-
+The privileges, and domains array refs will always contain a reference to an
+anonymous array, but that array may be empty if the user has no assigned domains
+or privileges.
 
 =head2  set_email
 
-    my $success = $user->set_email( $new_email_address )
+    my $success = $user->set_email( $new_email_address );
 
 Email addresses are not verified for validity in any way.  However, the default
 database field used for storing email addresses provides 320 bytes of storage,
@@ -784,6 +797,10 @@ which is the maximum length possible for a valid email address.
 
 =head2 set_role
 
+    my $success = $user->set_role( $new_role );
+
+Set's (or changes) the user's role.  There is a validity check: The role must
+have been already defined via L<Class::User::DBI::Roles>.
 
 =head2  set_username
 
@@ -827,14 +844,31 @@ C<Class::User::DBI> object.
     # If IP whitelist verification is required:
     my $is_valid = $user->validate( $passphrase, $current_ip );
 
-Returns true if and only if the user can be validated.  What that means will
-be described in the paragraphs below.  If the user cannot be validated, the
-return value will be C<undef>.  It doesn't matter what the reason for failure
-to authenticate might have been: Invalid user ID, invalid password, or
-invalid IP address; all three reasons result in a return value of C<undef>.
-This behavior encourages the best practice of not divulging to the user why
-his authentication failed.  The less information provided, the less an
-attacker can user to narrow the field.
+    my $forced_revalidate
+        = $user->validate( $passphrase, $current_ip, 1 ); # 3rd arg true.
+
+Returns Boolean C<true> if and only if the user can be validated.  What that
+means will be described in the paragraphs below.  If the user cannot be
+validated, the return value will be Boolean C<false>.  It doesn't matter what
+the reason for failure to authenticate might have been: Invalid user ID, invalid
+password, or invalid IP address; all three reasons result in a return value of
+Boolean C<false>.
+
+This design decision encourages the best practice of not divulging to the user
+why his authentication failed.  The less information provided, the less an
+attacker can user to narrow the field.  If it is necessary to explicitly test
+whether a userid actually exists, or whether the user's IP matches the whitelist,
+separate accessors are provided to facilitate that requirement. 
+
+If you wish to force a revalidation (assume a dirty cache) you have two options:
+
+    $user->validated(0);    # Invalidate the cache.
+    print "Ok.\n" if $user->validate( $pass, $ip );
+
+Or you can do that as a single operation:
+
+    print "Ok.\n" if $user->validate( $pass, $ip, 1 );
+
 
 =head3 What Validation (or Authentication) Means To This Module
 
@@ -876,6 +910,7 @@ false.  Also, after resetting C<validated()> to false, future calls to
 C<validate()> will go through the full authentication process again until such
 time as the authentication is successful.
 
+=head1 EXAMPLE
 
 
 =head1 DEPENDENCIES
@@ -892,70 +927,20 @@ transactional commits for inserts and updates spanning multiple tables.
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-The database used will need at least three User-related tables.  In their
-simplest form, a minimal recommendation would be:
+The database used will need seven tables to be set up.
 
+For convenience, a class method has been provided with each of this
+distribution's classes that will auto-generate the minimal schema within a
+SQLite or MySQL database.  The SQLite database is probably only useful for
+testing, as it lacks many of the security measures present in web-stack quality
+databases.
 
-    TABLE:          users
-    COLUMNS:        userid      VARCHAR(24)  NOT NULL DEFAULT ''
-                    salt        CHAR(128)    NOT NULL DEFAULT ''
-                    password    CHAR(128)    NOT NULL DEFAULT ''
-                    ip_required tinyint(1)   NOT NULL DEFAULT '1'
-                    username    VARCHAR(40)  DEFAULT NULL
-                    email       VARCHAR(320) DEFAULT NULL
-    PRIMARY KEY:    userid
-
-
-    TABLE:          user_ips
-    COLUMNS:        userid      VARCHAR(24)  NOT NULL DEFAULT ''
-                    ip          INT(10) UNSIGNED NOT NULL DEFAULT '0'
-    PRIMARY KEY:    userid, ip
-
-
-    TABLE:          user_roles
-    COLUMNS:        userid      VARCHAR(24) NOT NULL DEFAULT ''
-                    role        VARCHAR(40) NOT NULL DEFAULT ''
-    PRIMARY KEY:    userid, role
-
-For convenience, a class method has been provided that will auto-generate
-the minimal schema within a SQLite or MySQL database.  The SQLite database is
-probably only useful for testing, as it lacks many of the security measures
-present in web-stack quality databases.  A sample script that would generate
-a minimal database could be as simple as this:
-
-    use strict;
-    use warnings;
-    use DBIx::Connector;
-    use Class::User::DBI;
-
-    my( $dsn, $dbuser, $dbpass )
-        = (
-            'dbi:mysql:database=cudbi_tests,
-            'testing_user',
-            'testers_pass'
-        );
-
-    my $conn = DBIx::Connector->new(
-        $dsn,
-        $dbuser,
-        $dbpass,
-        {
-            AutoCommit  => 1,
-            RaiseError  => 1,
-        }
-
-    );
-
-    Class::User::DBI->configure_db( $conn )
-
-    __END__
-
-Within the C<scripts/> directory of this distribution you will find a script
+Within the C<./scripts/> directory of this distribution you will find a script
 that accepts a database type (mysql or sqlite), database name, database
 username, and database password on the command line.  It then opens the given
-database and creates the appropriate tables using a variation on the snippet
-shown above.  The script is named C<cudbi-configdb>.  Run it once without
-any command line parameters to see details on usage.
+database and creates the appropriate tables.  The script is named
+C<cudbi-configdb>.  Run it once without any command line parameters to see
+details on usage.
 
 After creating the database framework, it might be useful to alter the tables
 that have been generated by customizing field widths, text encoding, and so on.
