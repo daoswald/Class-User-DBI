@@ -48,7 +48,7 @@ WriteMakefile(
                 file    => 'lib/Class/User/DBI/Roles.pm',
                 version => '0.02',
             },
-            'Class::User::DBI::RolePrivilegess' => {
+            'Class::User::DBI::RolePrivileges' => {
                 file    => 'lib/Class/User/DBI/RolePrivileges.pm',
                 version => '0.02',
             },
