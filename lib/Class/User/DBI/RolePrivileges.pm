@@ -10,8 +10,6 @@ use Class::User::DBI::DB qw( db_run_ex  %RP_QUERY );
 use Class::User::DBI::Roles;
 use Class::User::DBI::Privileges;
 
-use Data::Dumper;
-
 our $VERSION = '0.02';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 

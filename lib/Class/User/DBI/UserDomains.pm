@@ -9,8 +9,6 @@ use Carp;
 use Class::User::DBI::DB qw( db_run_ex  %UD_QUERY );
 use Class::User::DBI::Domains;
 
-use Data::Dumper;
-
 our $VERSION = '0.02';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
