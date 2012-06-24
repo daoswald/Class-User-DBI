@@ -9,7 +9,7 @@ use Carp;
 use Class::User::DBI::DB qw( db_run_ex  %UD_QUERY );
 use Class::User::DBI::Domains;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Table is role, privilege.
@@ -140,7 +140,7 @@ Class::User::DBI::UserDomains - A user user domains class.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =head1 SYNOPSIS
 
@@ -159,12 +159,12 @@ belonging to a user.
     );
 
 
-    # Now we can play with Class::User::DBI::RolePrivileges
+    # Now we can play with Class::User::DBI::UserDomains
 
     # Set up a 'user-domains' table in the database.
     Class::User::DBI::UserDomains->configure_db( $conn );
     
-    # Instantiate a "worker_role" role so that we can manipulate its privileges.
+    # Instantiate a UserDomains object so we can play with it.
     my $ud = Class::User::DBI::Domains->new( $conn, 'userid' );
 
     $ud->add_domains( 'Treasure Island', 'Nimh' ); # This user works with TI and Nimh.
@@ -183,6 +183,12 @@ belonging to a user.
 
 This is a maintenance class facilitating the creation, deletion, and testing of
 domains belonging to a user.
+
+Before a domain may be granted to a user with this class, you need to create a
+domain entry using L<Class::User::DBI::Domains>.  That class manages domains 
+and their description.  I<This> class grants those domains to a user.  Please
+refer to the documentation for L<Class::User::DBI::Domains> to familiarize
+yourself with adding domains to the system.
 
 A common usage is to configure a 'cud_userdomains' database table, and then 
 add one or more user => domain pairs.  Domains are locality jurisdictions that a
@@ -289,9 +295,18 @@ Just an accessor for reading the object's target user ID.
 
 =head1 DEPENDENCIES
 
+The dependencies for this module are the same as for L<Class::User::DBI>, from
+this same distribution.  Refer to the documentation in that module for a full
+description.
+
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
+Please refer to the C<configure_db()> class method for this module for a
+simple means of creating the table that supports this class.
+
+All SQL for this distribution is contained in the L<Class::User::DBI::DB> 
+module.
 
 
 =head1 DIAGNOSTICS
@@ -310,9 +325,6 @@ its credentials to the tests and running the test scripts will offer really
 good diagnostics if some aspect of your database tables proves to be at odds 
 with what this module needs.
 
-Be advised that the the test suite drops its tables after completion, so be sure
-to run the test suite only against a database set up explicitly for testing
-purposes.
 
 =head1 INCOMPATIBILITIES
 
@@ -343,12 +355,16 @@ I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Class::User::DBI
+    perldoc Class::User::DBI::UserDomains
 
 
 You can also look for information at:
 
 =over 4
+
+=item * Class-User-DBI on Github
+
+L<https://github.com/daoswald/Class-User-DBI.git>
 
 =item * RT: CPAN's request tracker (report bugs here)
 

@@ -20,7 +20,7 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -407,7 +407,7 @@ Class::User::DBI - A User class: Login credentials, roles, privileges, domains.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =head1 SYNOPSIS
 
@@ -474,8 +474,12 @@ act independently, allowing for sophisticated access control.
     my $success     = $user->set_role( $role );
     my $has         = $user->is_role( $role );
     my $role        = $user->get_role;
+    
+    # Accessors for the RolePrivileges and UserDomains classes.
     my $rp          = $user->role_privileges;
+    my $has_priv    = $user->role_privileges->has_privilege( 'some_privilg' );
     my $ud          = $user->user_domains;
+    my $has_domain  = $user->user_domains->has_domain( 'some_domain' );
 
 
 =head1 DESCRIPTION
@@ -912,6 +916,13 @@ time as the authentication is successful.
 
 =head1 EXAMPLE
 
+Please refer to the contents of the C<examples/> directory from this
+distribution's build directory.  There you will find a working example that
+creates some roles, some privileges, assigns the privileges to a role, 
+creates some domains, creates a user, and associates a role and several domains
+to that user.  Though the example doesn't exercise every method contained in 
+the distribution, it provides a nice concise demonstration of setting up the
+basic elements of Authentication and RBAC, and using them.
 
 =head1 DEPENDENCIES
 

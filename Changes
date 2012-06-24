@@ -1,5 +1,11 @@
 Revision history for Class-User-DBI
 
+0.03        Sun Jun 23, 2012 21:30:00 PDT
+    - Corrected some POD typos.
+    - Fixed a spelling mistake in the META_MERGE segment within Makefile.PL
+    - POD enhancements regarding configuration, examples, and explanation of
+      the class heirarchy.
+
 0.02        Fri Jun 22, 2012 17:01:00 PDT
     - Major rewrite.
     - Added Domains, UserDomains, Roles, Privileges, and RolePrivileges classes.

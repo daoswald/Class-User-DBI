@@ -8,7 +8,7 @@ use Carp;
 
 use Class::User::DBI::DB qw( db_run_ex  %ROLE_QUERY );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Two tables: One table is role, description.  Second table is role, privilege.
@@ -146,15 +146,15 @@ Class::User::DBI::Roles - A Roles class.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =head1 SYNOPSIS
 
 Through a DBIx::Connector object, this module models a "Roles" class, used for
-Roles Based Access Control.  Class::User::DBI allows each user to have a single
-role.  Class::User::DBI::RolePrivileges allows each role to have multiple
-privileges.  And so goes the heirarchy: A user has a role, and a role has
-privileges.
+Roles Based Access Control.  L<Class::User::DBI> allows each user to have a 
+single role.  L<Class::User::DBI::RolePrivileges> allows each role to have 
+multiple privileges.  And so goes the heirarchy: A user has a role, and a role 
+has privileges.
 
     # Set up a connection using DBIx::Connector:
     # MySQL database settings:
@@ -208,6 +208,12 @@ Then use Class::User::DBI::Priviliges to create a few privileges.  Next use
 Class::User::DBI::RolePrivileges to associate one or more privileges with a
 given role.  Finally, use Class::User::DBI to associate a role with one or
 more users.
+
+L<Class::User::DBI::RolePrivileges> provides accessors to query whether a role
+has a given privilege.  L<Class::User::DBI> provides a means to query whether
+a user has a role.  As a convenience, Class::User::DBI also provides an accessor
+to the RolePrivileges class for quickly drilling through from the user to the
+privilege.
 
 =head1 EXPORT
 
@@ -297,9 +303,18 @@ description, pass an empty string as the description.
 
 =head1 DEPENDENCIES
 
+The dependencies for this module are the same as for L<Class::User::DBI>, from
+this same distribution.  Refer to the documentation in that module for a full
+description.
+
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
+Please refer to the C<configure_db()> class method for this module for a
+simple means of creating the table that supports this class.
+
+All SQL for this distribution is contained in the L<Class::User::DBI::DB> 
+module.
 
 
 =head1 DIAGNOSTICS
@@ -318,9 +333,6 @@ its credentials to the tests and running the test scripts will offer really
 good diagnostics if some aspect of your database tables proves to be at odds 
 with what this module needs.
 
-Be advised that the the test suite drops its tables after completion, so be sure
-to run the test suite only against a database set up explicitly for testing
-purposes.
 
 =head1 INCOMPATIBILITIES
 
@@ -351,12 +363,16 @@ I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Class::User::DBI
+    perldoc Class::User::DBI::Roles
 
 
 You can also look for information at:
 
 =over 4
+
+=item * Class-User-DBI on Github
+
+L<https://github.com/daoswald/Class-User-DBI.git>
 
 =item * RT: CPAN's request tracker (report bugs here)
 

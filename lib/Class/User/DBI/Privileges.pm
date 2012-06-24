@@ -8,7 +8,7 @@ use Carp;
 
 use Class::User::DBI::DB qw( db_run_ex  %PRIV_QUERY );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Class methods.
@@ -146,7 +146,7 @@ Class::User::DBI::Privileges - A Privileges class.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =head1 SYNOPSIS
 
@@ -300,9 +300,18 @@ a blank description, pass an empty string as the description.
 
 =head1 DEPENDENCIES
 
+The dependencies for this module are the same as for L<Class::User::DBI>, from
+this same distribution.  Refer to the documentation in that module for a full
+description.
+
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
+Please refer to the C<configure_db()> class method for this module for a
+simple means of creating the table that supports this class.
+
+All SQL for this distribution is contained in the L<Class::User::DBI::DB> 
+module.
 
 
 =head1 DIAGNOSTICS
@@ -321,9 +330,6 @@ its credentials to the tests and running the test scripts will offer really
 good diagnostics if some aspect of your database tables proves to be at odds 
 with what this module needs.
 
-Be advised that the the test suite drops its tables after completion, so be sure
-to run the test suite only against a database set up explicitly for testing
-purposes.
 
 =head1 INCOMPATIBILITIES
 
@@ -354,12 +360,16 @@ I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Class::User::DBI
+    perldoc Class::User::DBI::Privileges
 
 
 You can also look for information at:
 
 =over 4
+
+=item * Class-User-DBI on Github
+
+L<https://github.com/daoswald/Class-User-DBI.git>
 
 =item * RT: CPAN's request tracker (report bugs here)
 

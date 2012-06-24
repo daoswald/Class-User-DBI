@@ -242,12 +242,19 @@ distribution.
 There is also one subroutine, intended for use by the classes.  It handles
 database queries through the DBIx::Connector object.
 
+This package is generally not intended for external consumption.  However, if
+your database flavor doesn't like this distribution's SQL, you may be relieved
+to find out that this is the B<only> place you need to look for SQL problems.
+All of the distribution's SQL is here; even table creation.
 
 =head1 EXPORT
 
-Exports (by request) hashes containing the SQL queries for each class.  By 
-default it also exports C<db_run_ex>, which is a utility function facilitating
-database queries through the connector object.
+Exports (by request) hashes containing the SQL queries for each class.  The
+hashes are given names that represent abbreviated versions of the classes they
+support.
+
+By  default it also exports C<db_run_ex>, which is a utility function 
+facilitating database queries through the connector object.
 
 =head1 SUBROUTINES/METHODS
 
@@ -266,10 +273,17 @@ anonymous array holds the bind values for a single C<< $sth->execute() >> call.
 
 =head1 DEPENDENCIES
 
+The dependencies for this module are the same as for L<Class::User::DBI>, from
+this same distribution.  Refer to the documentation in that module for a full
+description.
+
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-
+All of the SQL for this entire distribution is found in the 
+L<Class::User::DBI::DB> module.  Any adjustments required to suit your database
+engine may be made here.  This module's SQL is known to run unaltered with 
+SQLite and MySQL.
 
 =head1 DIAGNOSTICS
 
@@ -287,9 +301,6 @@ its credentials to the tests and running the test scripts will offer really
 good diagnostics if some aspect of your database tables proves to be at odds 
 with what this module needs.
 
-Be advised that the the test suite drops its tables after completion, so be sure
-to run the test suite only against a database set up explicitly for testing
-purposes.
 
 =head1 INCOMPATIBILITIES
 
@@ -320,12 +331,16 @@ I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Class::User::DBI
+    perldoc Class::User::DBI::DB
 
 
 You can also look for information at:
 
 =over 4
+
+=item * Class-User-DBI on Github
+
+L<https://github.com/daoswald/Class-User-DBI.git>
 
 =item * RT: CPAN's request tracker (report bugs here)
 
