@@ -65,13 +65,6 @@ END_SQL
         PRIMARY KEY ( userid, ip )
     )
 END_SQL
-    SQL_configure_db_user_roles => << 'END_SQL',
-    CREATE TABLE IF NOT EXISTS user_roles (
-        userid      VARCHAR(24)           NOT NULL DEFAULT '',
-        role        VARCHAR(40)           NOT NULL DEFAULT '',
-        PRIMARY KEY ( userid, role )
-    )
-END_SQL
 );
 
 #------------ Queries for Class::User::DBI::Privileges -----------------------
