@@ -1,5 +1,9 @@
 Revision history for Class-User-DBI
 
+0.04        Wed Aug 15, 2012 12:14:00 PDT
+    - Class::User::DBI->list_users now returns a sorted list, and includes all
+      fields except salt and passphrase hash.
+
 0.03        Sun Jun 23, 2012 21:30:00 PDT
     - Corrected some POD typos.
     - Fixed a spelling mistake in the META_MERGE segment within Makefile.PL

@@ -20,7 +20,7 @@ our @EXPORT_OK = qw(
 
 use Carp;
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
@@ -42,7 +42,7 @@ our %USER_QUERY = (
     SQL_set_username    => 'UPDATE users SET username = ? WHERE userid = ?',
     SQL_update_password =>
       'UPDATE users SET salt = ?, password = ? WHERE userid = ?',
-    SQL_list_users => 'SELECT userid, username, email FROM users',
+    SQL_list_users => 'SELECT userid, username, email, role, ip_required FROM users ORDER BY userid',
     SQL_get_role   => 'SELECT role FROM users WHERE userid = ?',
     SQL_is_role    => 'SELECT role FROM users WHERE userid = ? AND role = ?',
     SQL_set_role   => 'UPDATE users SET role = ? WHERE userid = ?',

@@ -20,7 +20,7 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -581,7 +581,7 @@ below.
 
 This is a class method.  Pass a valid DBIx::Connector as a parameter. Returns
 a list of arrayrefs.  Each anonymous array contains C<userid>, C<username>,
-and C<email>.
+C<email>, C<role>, and C<ip_required>.
 
 
 =head2  configure_db
