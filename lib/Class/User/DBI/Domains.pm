@@ -8,7 +8,7 @@ use Carp;
 
 use Class::User::DBI::DB qw( db_run_ex  %DOM_QUERY );
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Class methods.

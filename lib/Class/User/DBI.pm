@@ -20,7 +20,7 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -322,6 +322,25 @@ sub set_username {
     return 1;
 }
 
+sub set_ip_required {
+    my ( $self, $required ) = @_;
+    croak 'Can\'t set an IP requirement for a user ID that doesn\'t exist.'
+      if ! $self->exists_user;
+    $required //= 0;
+    $required = $required ? 1 : 0;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_set_ip_required},
+        $required, $self->userid );
+    return 1;
+}
+
+sub get_ip_required {
+    my $self = shift;
+    return if ! $self->exists_user;
+    my $sth = $self->_db_run( $USER_QUERY{SQL_get_ip_required}, $self->userid );
+    my $required = ( $sth->fetchrow_array )[0];
+    return $required;
+}
+  
 sub get_role {
     my $self = shift;
     return if !$self->exists_user;
@@ -463,6 +482,8 @@ act independently, allowing for sophisticated access control.
     my $info_href   = $user->load_profile;
     my $credentials = $user->get_credentials;        # Returns a useful hashref.
     my @valid_ips   = $user->get_valid_ips;
+    my $ip_required = $user->get_ip_required;
+    my $success     = $user->set_ip_required(1);
     my $ exists     = $user->exists_user;
     my $success     = $user->delete_user;
     my $del_count   = $user->delete_ips( @ips );
@@ -784,11 +805,26 @@ profile and RBAC information.  The datastructure looks like this:
         role        => $role,       # The user's assigned role (may be blank).
         privileges  => [ @privs ],  # A reference to an array of user's privs.
         domains     => [ @doms  ],  # A reference to an array of user's domains.
+        ip_required => $required,   # 0 or 1.
     };
 
 The privileges, and domains array refs will always contain a reference to an
 anonymous array, but that array may be empty if the user has no assigned domains
 or privileges.
+
+=head2 get_ip_required
+
+    my $required = $user->get_ip_required;
+
+Returns 0 if this user doesn't require IP verification.  1 if user requires IP
+verification.  undef if the user doesn't exist in the database.
+
+=head2 set_ip_required
+
+    my $success = $user->set_ip_required( $new_setting );
+
+Pass 1 to set this user for IP validation. Pass 0 to turn off IP validation for
+this user.  Returns 1 on success.  Croaks if user isn't in the database.
 
 =head2  set_email
 

@@ -9,7 +9,7 @@ use Carp;
 use Class::User::DBI::DB qw( db_run_ex  %UD_QUERY );
 use Class::User::DBI::Domains;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Table is role, privilege.

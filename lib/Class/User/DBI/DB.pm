@@ -20,7 +20,7 @@ our @EXPORT_OK = qw(
 
 use Carp;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
@@ -31,7 +31,7 @@ our %USER_QUERY = (
       . 'FROM users WHERE userid = ?',
     SQL_exists_user => 'SELECT userid FROM users WHERE userid = ?',
     SQL_load_profile =>
-      'SELECT userid, username, email, role FROM users WHERE userid = ?',
+      'SELECT userid, username, email, role, ip_required FROM users WHERE userid = ?',
     SQL_add_ips    => 'INSERT INTO user_ips ( userid, ip ) VALUES( ?, ? )',
     SQL_delete_ips => 'DELETE FROM user_ips WHERE userid = ? AND ip = ?',
     SQL_add_user => 'INSERT INTO users ( userid, salt, password, ip_required, '
@@ -40,10 +40,12 @@ our %USER_QUERY = (
     SQL_delete_user_ips => 'DELETE FROM user_ips WHERE userid = ?',
     SQL_set_email       => 'UPDATE users SET email = ? WHERE userid = ?',
     SQL_set_username    => 'UPDATE users SET username = ? WHERE userid = ?',
+    SQL_set_ip_required => 'UPDATE users SET ip_required = ? where userid = ?',
     SQL_update_password =>
       'UPDATE users SET salt = ?, password = ? WHERE userid = ?',
     SQL_list_users => 'SELECT userid, username, email, role, ip_required FROM users ORDER BY userid',
     SQL_get_role   => 'SELECT role FROM users WHERE userid = ?',
+    SQL_get_ip_required => 'SELECT ip_required FROM users WHERE userid = ?',
     SQL_is_role    => 'SELECT role FROM users WHERE userid = ? AND role = ?',
     SQL_set_role   => 'UPDATE users SET role = ? WHERE userid = ?',
     SQL_configure_db_users => << 'END_SQL',
