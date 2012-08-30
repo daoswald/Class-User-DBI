@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 
-# cudbi-configdb v0.02.
+# cudbi-configdb v0.06.
 # generate Class::User::DBI tables in database.
 # Warning: This will drop the following tables before creating them: 
 # cud_users, cud_user_ips, cud_roles, cud_privileges, cud_role_privileges,

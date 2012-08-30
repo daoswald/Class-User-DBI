@@ -9,11 +9,9 @@ use Carp;
 use Class::User::DBI::DB qw( db_run_ex  %UD_QUERY );
 use Class::User::DBI::Domains;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
-# Table is role, privilege.
-# Table allows duplicate roles, but not duplicate role/priv.
 
 # Class methods.
 
@@ -334,6 +332,8 @@ any additional configuration changes you had to make so that I can document
 the compatibility, and improve the documentation for the configuration process.
 
 =head1 BUGS AND LIMITATIONS
+
+Let me know if you find any!  
 
 =head1 AUTHOR
 

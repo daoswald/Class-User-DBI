@@ -10,7 +10,7 @@ use Class::User::DBI::DB qw( db_run_ex  %RP_QUERY );
 use Class::User::DBI::Roles;
 use Class::User::DBI::Privileges;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Table is role, privilege.

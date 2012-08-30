@@ -1,4 +1,10 @@
 Revision history for Class-User-DBI
+
+0.06        Thu Aug 30, 2012 13:10:00 PDT
+    - Changed 'id' datatype to BIGINT in user_ips table to resolve issue where
+      mysql and sqlite have different ways of designating an unsigned int type.
+      Failure to designate an unsigned int (or larger) for IP storage results
+      in unreliable round-trip.
 0.05        Tue Aug 21, 2012 19:16:00 PDT
     - Added setter and getter for ip_required field for users.
     - load_profile() now also includes an ip_required field.

@@ -22,3 +22,4 @@
 ^pm_to_blib
 \.gz$
 MYMETA\b
+^Class-User-DBI-\d\.

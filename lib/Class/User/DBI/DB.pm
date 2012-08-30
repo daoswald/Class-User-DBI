@@ -20,7 +20,7 @@ our @EXPORT_OK = qw(
 
 use Carp;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
@@ -63,7 +63,7 @@ END_SQL
     SQL_configure_db_user_ips => << 'END_SQL',
     CREATE TABLE IF NOT EXISTS user_ips (
         userid      VARCHAR(24)           NOT NULL DEFAULT '',
-        ip          INT(10)               NOT NULL DEFAULT '0',
+        ip          BIGINT                NOT NULL DEFAULT '0',
         PRIMARY KEY ( userid, ip )
     )
 END_SQL

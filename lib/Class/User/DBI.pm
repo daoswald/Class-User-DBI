@@ -20,8 +20,8 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.05';
-$VERSION = eval $VERSION;    ## no critic (eval)
+our $VERSION = '0.06';
+# $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
     my ( $class, $db_conn, $userid ) = @_;
