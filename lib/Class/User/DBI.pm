@@ -20,7 +20,7 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -326,7 +326,7 @@ sub set_ip_required {
     my ( $self, $required ) = @_;
     croak 'Can\'t set an IP requirement for a user ID that doesn\'t exist.'
       if ! $self->exists_user;
-    $required //= 0;
+    $required = defined $required ? $required : 0;
     $required = $required ? 1 : 0;
     my $sth = $self->_db_run( $USER_QUERY{SQL_set_ip_required},
         $required, $self->userid );
@@ -426,7 +426,7 @@ Class::User::DBI - A User class: Login credentials, roles, privileges, domains.
 
 =head1 VERSION
 
-Version 0.03
+Version 0.07
 
 =head1 SYNOPSIS
 

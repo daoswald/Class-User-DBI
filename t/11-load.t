@@ -6,7 +6,7 @@ use warnings;
 use Test::More tests => 7;
 
 BEGIN {
-    use_ok('Class::User::DBI::DB'            ) || print "Bail out!\n";
+    use_ok('Class::User::DBI::DB'            )     || print "Bail out!\n";
     use_ok('Class::User::DBI'                )     || print "Bail out!\n";
     use_ok('Class::User::DBI::Roles'         )     || print "Bail out!\n";
     use_ok('Class::User::DBI::Privileges'    )     || print "Bail out!\n";

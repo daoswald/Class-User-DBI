@@ -10,7 +10,7 @@ use Class::User::DBI::DB qw( db_run_ex  %RP_QUERY );
 use Class::User::DBI::Roles;
 use Class::User::DBI::Privileges;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Table is role, privilege.
@@ -62,8 +62,6 @@ sub get_role {
 # returns 0 or 1.
 sub has_privilege {
     my ( $self, $privilege ) = @_;
-    croak 'Must pass a defined value in privilege test.'
-      if !defined $privilege;
     croak 'Must pass a non-empty value in privilege test.'
       if !length $privilege;
     my $p = Class::User::DBI::Privileges->new( $self->_db_conn );
