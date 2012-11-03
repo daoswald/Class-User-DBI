@@ -16,6 +16,7 @@ t/02-pod.t
 t/03-pod-coverage.t
 t/04-perlcritic.t
 t/05-kwalitee.t
+t/09-changes.t
 t/10-prereqs.t
 t/11-load.t
 t/15-cudbi_db.t

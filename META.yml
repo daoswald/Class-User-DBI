@@ -24,11 +24,11 @@ no_index:
 provides:
   Class::User::DBI:
     file: lib/Class/User/DBI.pm
-    version: 0.07
+    version: 0.08
 requires:
   Authen::Passphrase::SaltedSHA512: 0.05
   DBIx::Connector: 0
   List::MoreUtils: 0
   perl: 5.008000
 resources: {}
-version: 0.07
+version: 0.08

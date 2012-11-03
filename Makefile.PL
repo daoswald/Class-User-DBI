@@ -29,10 +29,10 @@ WriteMakefile(
         provides => {
             'Class::User::DBI' => {
                 file    => 'lib/Class/User/DBI.pm',
-                version => '0.07',
+                version => '0.08',
             },
         },
-        version   => '0.07',
+        version   => '0.08',
         resources => {
             repository => {
                 web  => 'http://github.com/daoswald/Class-User-DBI.git',

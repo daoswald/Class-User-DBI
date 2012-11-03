@@ -20,7 +20,7 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -426,7 +426,7 @@ Class::User::DBI - A User class: Login credentials, roles, privileges, domains.
 
 =head1 VERSION
 
-Version 0.07
+Version 0.08
 
 =head1 SYNOPSIS
 

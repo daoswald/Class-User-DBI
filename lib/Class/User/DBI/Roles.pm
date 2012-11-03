@@ -8,7 +8,7 @@ use Carp;
 
 use Class::User::DBI::DB qw( db_run_ex  %ROLE_QUERY );
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # Two tables: One table is role, description.  Second table is role, privilege.
@@ -146,7 +146,7 @@ Class::User::DBI::Roles - A Roles class.
 
 =head1 VERSION
 
-Version 0.03
+Version 0.08
 
 =head1 SYNOPSIS
 

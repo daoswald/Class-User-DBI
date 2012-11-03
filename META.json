@@ -46,10 +46,10 @@
    "provides" : {
       "Class::User::DBI" : {
          "file" : "lib/Class/User/DBI.pm",
-         "version" : "0.07"
+         "version" : "0.08"
       }
    },
    "release_status" : "stable",
    "resources" : {},
-   "version" : "0.07"
+   "version" : "0.08"
 }

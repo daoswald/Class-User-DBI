@@ -20,7 +20,7 @@ our @EXPORT_OK = qw(
 
 use Carp;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 # ---------------- SQL queries for Class::User::DBI --------------------------
@@ -217,7 +217,7 @@ C<Class::User::DBI::*> classes.
 
 =head1 VERSION
 
-Version 0.02
+Version 0.08
 
 =head1 SYNOPSIS
 
