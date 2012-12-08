@@ -9,7 +9,7 @@ use Carp;
 use Class::User::DBI::DB qw( db_run_ex  %UD_QUERY );
 use Class::User::DBI::Domains;
 
-our $VERSION = '0.08';
+our $VERSION = '0.10';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 
@@ -138,7 +138,7 @@ Class::User::DBI::UserDomains - A user user domains class.
 
 =head1 VERSION
 
-Version 0.08
+Version 0.10
 
 =head1 SYNOPSIS
 

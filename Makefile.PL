@@ -21,7 +21,7 @@ WriteMakefile(
         'DBD::SQLite'     => 0,
     },
     PREREQ_PM => {
-        'Authen::Passphrase::SaltedSHA512' => '0.05',
+        'Authen::Passphrase::SaltedSHA512' => '0.06',
         'DBIx::Connector'                  => 0,
         'List::MoreUtils'                  => 0,
     },
@@ -29,10 +29,30 @@ WriteMakefile(
         provides => {
             'Class::User::DBI' => {
                 file    => 'lib/Class/User/DBI.pm',
-                version => '0.08',
+                version => '0.10',
+            },
+            'Class::User::DBI::Roles' => {
+                file    => 'lib/Class/User/DBI/Roles.pm',
+                version => '0.10',
+            },
+            'Class::User::DBI::Privileges' => {
+                file    => 'lib/Class/User/DBI/Privileges.pm',
+                version => '0.10',
+            },
+            'Class::User::DBI::RolePrivileges' => {
+                file    => 'lib/Class/User/DBI/RolePrivileges.pm',
+                version => '0.10',
+            },
+            'Class::User::DBI::Domains' => {
+                file    => 'lib/Class/User/DBI/Domains.pm',
+                version => '0.10',
+            },
+            'Class::User::DBI::Userdomains' => {
+                file    => 'lib/Class/User/DBI/UserDomains.pm',
+                version => '0.10',
             },
         },
-        version   => '0.08',
+        version   => '0.10',
         resources => {
             repository => {
                 web  => 'http://github.com/daoswald/Class-User-DBI.git',

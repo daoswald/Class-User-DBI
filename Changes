@@ -1,5 +1,16 @@
 Revision history for Perl module Class::User::DBI
 
+0.10 2012-12-07
+  - Fixed META_MERGE provides field for proper CPAN indexing (broken
+    in 0.09).
+
+0.09 2012-12-05
+  - add_user(): Better handling of possible race condition if user 
+    already exists. Previously an exception could be thrown on 
+    attempt to add twice, since the DB only allows unique entries.  
+    Now undef is returned.
+  - add_user(): Transaction tests for existence of user ahead of add.
+
 0.08 2012-11-02
   - "Changes" now CPAN::Changes::Spec compliant.
   - t/09-changes.t added to verify compliance.

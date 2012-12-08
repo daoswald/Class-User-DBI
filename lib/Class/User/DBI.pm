@@ -20,7 +20,7 @@ use Class::User::DBI::Roles;
 use Class::User::DBI::RolePrivileges;
 use Class::User::DBI::UserDomains;
 
-our $VERSION = '0.08';
+our $VERSION = '0.10';
 # $VERSION = eval $VERSION;    ## no critic (eval)
 
 sub new {
@@ -93,20 +93,30 @@ sub add_user {
     my $passgen =
       Authen::Passphrase::SaltedSHA512->new( passphrase => $password );
     my ( $salt_hex, $hash_hex ) = ( $passgen->salt_hex, $passgen->hash_hex );
-    $self->_db_conn->txn(
-        fixup => sub {
-            my $sth = $_->prepare( $USER_QUERY{SQL_add_user} );
-            $sth->execute( $self->userid, $salt_hex, $hash_hex, $ip_req,
-                $username, $email, $role );
-            $self->add_ips( @{$ips_aref} ) if ref($ips_aref) eq 'ARRAY';
-            if ( exists $userinfo->{domains}
-                && ref $userinfo->{domains} eq 'ARRAY' )
-            {
-                $self->user_domains->add_domains( @{ $userinfo->{domains} } );
-            }
-        }
-    );
-    return $self->{exists_user} = $self->userid;
+    local $@;
+    my $success = eval {
+      $self->_db_conn->txn(
+          fixup => sub {
+              die "User already exists." if $self->exists_user;
+              my $sth = $_->prepare( $USER_QUERY{SQL_add_user} );
+              $sth->execute( $self->userid, $salt_hex, $hash_hex, $ip_req,
+                  $username, $email, $role );
+              $self->add_ips( @{$ips_aref} ) if ref($ips_aref) eq 'ARRAY';
+              if ( exists $userinfo->{domains}
+                  && ref $userinfo->{domains} eq 'ARRAY' )
+              {
+                  $self->user_domains->add_domains( @{ $userinfo->{domains} } );
+              }
+          }
+      );
+      1; # Eval guard.
+    }; # Eval.
+    if( ! $success ) {
+      return;  # User already existed, perhaps.
+    }
+    else {
+      return $self->{exists_user} = $self->userid; # Success.
+    }
 }
 
 sub delete_user {
@@ -426,7 +436,7 @@ Class::User::DBI - A User class: Login credentials, roles, privileges, domains.
 
 =head1 VERSION
 
-Version 0.08
+Version 0.10
 
 =head1 SYNOPSIS
 
